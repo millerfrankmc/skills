@@ -167,22 +167,21 @@ def process_user(user: User) -> Optional[dict]:
 .
 ├── LICENSE                     # MIT License
 ├── README.md                   # Este archivo
-└── skills/
-    └── linus-kiss-dry-yagni/   # Skill principal
-        ├── SKILL.md            # Definición de la skill
-        ├── evals/
-        │   └── evals.json      # Casos de prueba A/B
-        └── resources/
-            ├── anti-patterns/  # Anti-patrones comunes
-            ├── cases/          # Casos de estudio
-            ├── decision/       # Frameworks de decisión
-            ├── design/         # Diseño guiado por KISS
-            ├── examples/       # Ejemplos por lenguaje
-            ├── principles/     # Principios fundamentales
-            └── strategies/     # Estrategias de simplificación
+└── linus-kiss-dry-yagni/       # Skill principal
+    ├── SKILL.md                # Definición de la skill
+    ├── evals/
+    │   └── evals.json          # Casos de prueba A/B
+    └── resources/
+        ├── anti-patterns/      # Anti-patrones comunes
+        ├── cases/              # Casos de estudio
+        ├── decision/           # Frameworks de decisión
+        ├── design/             # Diseño guiado por KISS
+        ├── examples/           # Ejemplos por lenguaje
+        ├── principles/         # Principios fundamentales
+        └── strategies/         # Estrategias de simplificación
 ```
 
-> **Nota:** La skill está organizada bajo `skills/linus-kiss-dry-yagni/` siguiendo la convención de skills.sh para repositorios con múltiples skills.
+> **Nota:** Este repositorio `skills` contiene múltiples skills. Cada skill está en su propia carpeta.
 
 ---
 
