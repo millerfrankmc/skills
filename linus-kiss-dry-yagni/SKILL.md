@@ -25,6 +25,7 @@ Skill directiva de simplicidad. Aplica correcciones automáticamente.
 | Case studies | `resources/cases/case-studies.md` |
 | Estrategias simplificación | `resources/strategies/simplification-strategies.md` |
 | Fundamentos | `resources/principles/fundamentals.md` |
+| Protección de seguridad | `resources/security/safety-guards.md` |
 
 ## Límites Concretos (NO Negociables)
 
@@ -32,14 +33,36 @@ Estos son los límites máximos. Si los excedes, debes refactorizar:
 
 | Elemento | Límite Máximo | Qué hacer si se excede |
 |----------|---------------|------------------------|
-| **Líneas por función** | 20 | Dividir en funciones más pequeñas |
+| **Líneas por función** | 20 | Dividir en funciones más pequeñas (ver excepciones abajo) |
 | **Parámetros por función** | 4 | Usar objeto/struct para agrupar |
 | **Niveles de anidamiento** | 2 | Usar guard clauses |
 | **Clases por archivo** | 1 | Separar en archivos |
 | **Responsabilidades por clase** | 1 | Extraer responsabilidades |
 | **Duplicación de código** | 0 veces | Extraer función común |
-| **Interfaces sin uso** | 0 | Eliminar hasta necesitar |
-| **Comentarios "qué"** | 0 | Renombrar código |
+| **Interfaces sin uso** | 0 | Eliminar hasta necesitar (excepto código de seguridad) |
+| **Comentarios "qué"** | 0 | Renombrar código (preservar comentarios `SECURITY:`) |
+
+### ⚠️ Excepción Crítica: Código de Seguridad
+
+El código de seguridad tiene límites ampliados (ver `resources/security/safety-guards.md`):
+
+| Elemento | Código Normal | Código de Seguridad |
+|----------|---------------|---------------------|
+| **Líneas por función** | Max 20 | **Max 50** (validaciones completas requieren espacio) |
+| **Niveles de anidamiento** | Max 2 | **Max 4** (validaciones múltiples necesitan profundidad) |
+| **Parámetros por función** | Max 4 | **Max 6** (configuración de seguridad puede necesitar más) |
+| **Interfaces con 1 uso** | Eliminar | **Mantener** (auth/encryption pueden necesitar otra implementación) |
+| **Código "por si acaso"** | Eliminar | **Preservar** (defensa en profundidad es necesaria) |
+| **Comentarios** | Eliminar "qué" | **Preservar** si contienen `NUNCA`, `CVE`, `SECURITY` |
+
+**¿Qué es código de seguridad?**
+- Funciones con prefijos: `validate*`, `sanitize*`, `authenticate*`, `hash*`, `encrypt*`, `verify*`
+- Uso de bibliotecas: `bcrypt`, `argon2`, `jsonwebtoken`, `helmet`, `csurf`, `DOMPurify`
+- Comparaciones de secrets/tokens/passwords
+- Headers de seguridad HTTP
+- SQL parametrizado/prepared statements
+
+**Regla de oro:** "La simplicidad nunca debe sacrificar la seguridad. Un código simple pero inseguro es peor que código complejo pero seguro."
 
 ## Anti-Patrones Comunes
 
@@ -74,22 +97,50 @@ Estos son los límites máximos. Si los excedes, debes refactorizar:
 |------------|---------|
 | Código idéntico 2+ veces | Extraer función |
 | Constantes repetidas | Centralizar |
-| Validaciones similares | Crear utilidad común |
+| Validaciones similares | Crear utilidad común (ver excepción abajo) |
 | Estructura de datos duplicada | Extraer tipo/interfaz |
 
 **Advertencia**: Código que PARECE igual pero representa conceptos distintos → mantener separado.
+
+**⚠️ Excepción de Seguridad: Validaciones por Contexto de Confianza**
+
+DRY NO aplica cuando el mismo tipo de dato necesita validaciones diferentes según el contexto:
+
+```python
+# API pública - validación estricta
+def create_user_public(data):
+    validate_email_strict(data['email'])      # No temp emails
+    validate_password_strong(data['password'])  # Complejidad requerida
+
+# Admin interno - validación relajada
+def create_user_admin(data):
+    validate_email_basic(data['email'])       # Cualquier email válido
+    # Password generado automáticamente, no validar complejidad
+```
+
+**Por qué mantener separado:** Diferentes threat models (público vs interno) y diferentes casos de uso. Centralizar crearía un único punto de fallo.
 
 ### YAGNI - Eliminar
 
 | Si detectas | Aplicar |
 |------------|---------|
-| Feature "por si acaso" | Eliminar |
-| Abstracción sin uso actual | Eliminar |
-| Interface con 1 implementación | Eliminar |
+| Feature "por si acaso" | Eliminar (excepto defensa en profundidad de seguridad) |
+| Abstracción sin uso actual | Eliminar (excepto código de seguridad crítico) |
+| Interface con 1 implementación | Eliminar (excepto auth/crypto/encryption) |
 | Configuración no requerida | Eliminar |
 | Código comentado | Eliminar (está en git) |
 | Métodos no usados | Eliminar |
-| Dependencias no usadas | Eliminar de imports/requires |
+| Dependencias no usadas | Eliminar de imports/requires (excepto librerías de seguridad) |
+
+**⚠️ YAGNI NO aplica a:**
+- Validación de entrada en múltiples capas (MIME + extensión + magic bytes)
+- Rate limiting en endpoints de autenticación
+- Headers de seguridad HTTP (HSTS, CSP, X-Frame-Options)
+- Logging de auditoría para acciones sensibles
+- Manejo de errores que no filtra información sensible
+- Graceful shutdown para integridad de datos
+
+Ver `resources/security/safety-guards.md` para lista completa.
 
 ### Orden de Prioridad
 
@@ -138,12 +189,20 @@ Los archivos de configuración y estructura de proyecto necesarios para que el c
 - [YAGNI] Descripción del cambio
 - [DRY] Descripción del cambio
 - [LINUS] Descripción del cambio
+
+### Protecciones de Seguridad Aplicadas
+- [SECURITY] Qué se preservó y por qué
+- [SECURITY] Verificaciones post-simplificación
+- [SECURITY] Código identificado como crítico (no simplificado)
 ```
 
 **Sin preguntas. Sin confirmaciones. Escribir archivos directamente.**
 
+**⚠️ Excepción**: Si se detecta código de seguridad crítico que podría verse afectado, verificar con `resources/security/safety-guards.md` antes de proceder.
+
 ## Checklist Antes de Entregar
 
+### Checklist KISS-DRY-YAGNI
 - [ ] Funciones tienen ≤20 líneas
 - [ ] Máximo 4 parámetros por función
 - [ ] Máximo 2 niveles de anidamiento
@@ -152,6 +211,24 @@ Los archivos de configuración y estructura de proyecto necesarios para que el c
 - [ ] Sin código "por si acaso"
 - [ ] Nombres describen el "qué", no necesitan comentarios
 - [ ] Código legible sin explicaciones adicionales
+
+### ⚠️ Checklist de Seguridad (CRÍTICO)
+- [ ] **Validaciones preservadas**: ¿Todas las validaciones de entrada siguen presentes?
+- [ ] **Sanitización**: ¿Los datos de usuario se sanitizan antes de usar?
+- [ ] **SQL seguro**: ¿No se introdujo string interpolation en SQL?
+- [ ] **Headers de seguridad**: ¿Se preservaron los headers de seguridad?
+- [ ] **Manejo de errores**: ¿Los errores no filtran información sensible?
+- [ ] **Password hashing**: ¿Se mantuvo el uso de bcrypt/argon2?
+- [ ] **CSRF/Tokens**: ¿Se preservaron las protecciones contra CSRF?
+- [ ] **Rate limiting**: ¿Se mantuvo el rate limiting en endpoints críticos?
+- [ ] **Comentarios de seguridad**: ¿Se preservaron comentarios críticos (`// NUNCA`, `// CVE`, `// SECURITY`)?
+- [ ] **Código de seguridad**: ¿No se simplificó a expensas de la protección?
+
+### Excepciones Aplicadas
+- [ ] Código de seguridad identificado y preservado (ver `resources/security/safety-guards.md`)
+- [ ] Funciones de seguridad con >20 líneas justificadas
+- [ ] Validaciones por contexto de confianza mantenidas separadas (no DRY)
+- [ ] Comentarios `SECURITY:` preservados
 
 ## Cómo Usar
 
