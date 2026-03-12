@@ -22,13 +22,27 @@ Esta skill transforma código complejo y sobre-ingenierizado en código simple, 
 
 | Problema | Solución |
 |----------|----------|
-| Funciones de 100+ líneas | Dividir en funciones ≤20 líneas |
+| Funciones de 100+ líneas | Dividir en funciones ≤20 líneas (≤50 para seguridad) |
 | Anidamiento de 6+ niveles | Guard clauses planas |
 | 10+ parámetros en funciones | Objeto/struct config |
-| Interfaces con 1 implementación | Eliminar abstracción innecesaria |
+| Interfaces con 1 implementación | Eliminar abstracción innecesaria (excepto seguridad) |
 | Código duplicado | Extraer función común |
 | Fábricas de fábricas | Simplificar a funciones directas |
-| Código "por si acaso" | Eliminar (YAGNI) |
+| Código "por si acaso" | Eliminar (YAGNI) - excepto defensa en profundidad |
+| Over-engineering de seguridad | **Preservar** validaciones, headers, cifrado |
+
+### 🔒 Seguridad Integrada
+
+Esta skill **no sacrifica seguridad por simplicidad**:
+
+- ✅ Preserva validaciones de entrada (múltiples capas)
+- ✅ Mantiene SQL parametrizado (nunca convierte a interpolación)
+- ✅ Conserva headers de seguridad HTTP
+- ✅ Respeta funciones de seguridad (bcrypt, JWT, CSRF)
+- ✅ Mantiene comentarios críticos (`// SECURITY:`, `// NUNCA`)
+- ✅ No aplica DRY a validaciones con diferentes threat models
+
+> **"La simplicidad nunca debe sacrificar la seguridad."**
 
 ### Resultados medidos
 
@@ -39,6 +53,19 @@ En pruebas A/B contra baseline sin skill:
 | Pass rate | **+43%** (100% vs 57%) |
 | Líneas de código | **-42%** (más simple) |
 | Tiempo de refactorización | **-9.6%** |
+
+### 🔐 Benchmark de Seguridad
+
+8 evaluaciones exhaustivas verifican que la skill **preserva protecciones críticas**:
+
+| Categoría | Evaluaciones | Pass Rate |
+|-----------|--------------|-----------|
+| Simplificación correcta | God Function, JWT Validation | 100% ✅ |
+| Preservación de seguridad | Auth, SQL Injection, Input Validation | 100% ✅ |
+| Inteligencia contextual | DRY vs Context, Headers, Comments | 100% ✅ |
+| **Total verificaciones de seguridad** | **40/40** | **100%** |
+
+> Ver `/skill-creator-workspace/benchmark-results.md` para detalles completos.
 
 ---
 
@@ -93,9 +120,9 @@ def process_user(user: User) -> Optional[dict]:
 - Un cambio en un solo lugar
 
 ### YAGNI - You Ain't Gonna Need It
-- Eliminar código "por si acaso"
+- Eliminar código "por si acaso" (excepto defensa en profundidad de seguridad)
 - Sin abstracciones prematuras
-- Sin interfaces con una sola implementación
+- Sin interfaces con una sola implementación (excepto auth/crypto)
 
 ### Filosofía Linus Torvalds
 > "The way to write clean code is to not write clever code."
@@ -110,7 +137,7 @@ def process_user(user: User) -> Optional[dict]:
 
 | Elemento | Límite | Acción si se excede |
 |----------|--------|---------------------|
-| **Líneas por función** | 20 | Dividir en funciones más pequeñas |
+| **Líneas por función** | 20 (50 para seguridad) | Dividir en funciones más pequeñas |
 | **Parámetros por función** | 4 | Usar objeto/struct |
 | **Niveles de anidamiento** | 2 | Usar guard clauses |
 | **Duplicación de código** | 0 | Extraer función común |
@@ -121,6 +148,7 @@ def process_user(user: User) -> Optional[dict]:
 ## Recursos Incluidos
 
 - **Anti-patrones comunes** - Identificación y soluciones
+- **Protección de seguridad** - Guardias que preservan validaciones y controles de seguridad
 - **Ejemplos por lenguaje** - Python, TypeScript, Go, Kotlin, Rust
 - **Case studies** - Refactorizaciones reales
 - **Estrategias de simplificación** - Técnicas específicas
@@ -187,13 +215,19 @@ def process_user(user: User) -> Optional[dict]:
 
 ## Testing
 
-Esta skill ha sido probada con A/B testing:
+### A/B Testing - Simplificación
 
 - **5 casos de prueba** (Python, TypeScript, Go, Kotlin, Ruby)
 - **100% pass rate** con la skill vs 57% sin skill
 - **42% reducción** en líneas de código promedio
 
-Ver `/evals/evals.json` para los casos de prueba completos.
+### Benchmark de Seguridad
+
+- **8 evaluaciones exhaustivas** verifican preservación de seguridad
+- **40 verificaciones de seguridad** - 100% pass rate
+- **0 simplificaciones inseguras** detectadas
+
+Ver `/skill-creator-workspace/benchmark-results.md` para resultados detallados.
 
 ---
 
