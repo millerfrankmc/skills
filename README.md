@@ -7,7 +7,7 @@
 ## Instalación
 
 ```bash
-npx skills add millerfrankmc/linus-kiss-dry-yagni
+npx skills add millerfrankmc/skills/linus-kiss-dry-yagni
 ```
 
 Soportado en: Claude Code, Cursor, Codex, OpenCode, y [más agentes](https://skills.sh).
