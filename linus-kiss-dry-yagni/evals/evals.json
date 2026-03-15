@@ -6,35 +6,223 @@
       "eval_name": "python-complex-nested-code",
       "prompt": "Refactoriza este código Python aplicando KISS, DRY, YAGNI y principios de Linus Torvalds. El código tiene múltiples problemas: anidamiento profundo, duplicación, funciones que hacen muchas cosas, y parámetros excesivos.\n\n```python\nclass UserManager:\n    def process_user_data(self, user_id, user_name, user_email, user_phone, user_address, user_city, user_country, is_active, is_premium, created_at):\n        if user_id:\n            if user_name:\n                if user_email:\n                    if '@' in user_email and '.' in user_email:\n                        if is_active:\n                            if is_premium:\n                                discount = 0.20\n                            else:\n                                discount = 0.10\n                            \n                            # Validar email otra vez\n                            email_valid = False\n                            if '@' in user_email:\n                                if '.' in user_email:\n                                    email_valid = True\n                            \n                            if email_valid:\n                                # Guardar usuario\n                                user_data = {\n                                    'id': user_id,\n                                    'name': user_name,\n                                    'email': user_email,\n                                    'phone': user_phone,\n                                    'address': user_address,\n                                    'city': user_city,\n                                    'country': user_country,\n                                    'status': 'active',\n                                    'discount': discount,\n                                    'created': created_at\n                                }\n                                \n                                # Notificar - esto se podría necesitar en el futuro\n                                notification_config = {\n                                    'email': True,\n                                    'sms': True,\n                                    'push': True,\n                                    'webhook': 'https://api.example.com/webhook'\n                                }\n                                \n                                return user_data\n        return None\n\n    def validate_another_email(self, email):\n        if '@' in email:\n            if '.' in email:\n                return True\n        return False\n```",
       "expected_output": "Código Python refactorizado con: 1) Guard clauses en lugar de anidamiento profundo, 2) Funciones pequeñas con una sola responsabilidad, 3) Eliminación de código duplicado (validación de email), 4) Objeto para agrupar parámetros relacionados, 5) Eliminación de código YAGNI (notification_config no usado)",
-      "files": []
+      "files": [],
+      "assertions": [
+        {
+          "name": "guard_clauses_used",
+          "description": "El código usa guard clauses (early returns) en lugar de anidamiento profundo",
+          "check": "code_contains",
+          "pattern": "if not|return None|raise"
+        },
+        {
+          "name": "email_validation_deduplicated",
+          "description": "La validación de email está centralizada en una sola función",
+          "check": "code_contains",
+          "pattern": "def _?is_valid_email|def _?validate_email|def _?check_email"
+        },
+        {
+          "name": "yagni_code_removed",
+          "description": "Se eliminó código YAGNI como notification_config no utilizado",
+          "check": "code_not_contains",
+          "pattern": "notification_config|webhook"
+        },
+        {
+          "name": "parameters_grouped",
+          "description": "Los parámetros relacionados se agrupan en un objeto/struct",
+          "check": "code_contains",
+          "pattern": "class User|@dataclass|TypedDict|UserData"
+        },
+        {
+          "name": "max_lines_total",
+          "description": "El archivo tiene menos de 80 líneas (código simple)",
+          "check": "max_lines",
+          "max_lines": 80
+        },
+        {
+          "name": "max_classes",
+          "description": "Máximo 2 clases (evitar sobre-fragmentación)",
+          "check": "max_classes",
+          "max_classes": 2
+        }
+      ]
     },
     {
       "id": 2,
       "eval_name": "typescript-over-engineering",
       "prompt": "Simplifica este código TypeScript que tiene sobre-ingeniería con interfaces innecesarias, abstracciones prematuras y código 'clever'. Aplica KISS, DRY, YAGNI.\n\n```typescript\ninterface IProcessor<T, R> {\n  process(data: T): R;\n}\n\ninterface IValidator<T> {\n  validate(data: T): boolean;\n}\n\ninterface ILogger {\n  log(message: string): void;\n}\n\ninterface ICache<T> {\n  get(key: string): T | undefined;\n  set(key: string, value: T): void;\n}\n\nclass UserData implements IValidator<UserData> {\n  constructor(\n    public name: string,\n    public email: string,\n    public age: number\n  ) {}\n  \n  validate(data: UserData): boolean {\n    return !!(data.name && data.email && data.age > 0);\n  }\n}\n\nclass UserProcessor implements IProcessor<UserData, ProcessedUser> {\n  private validator: IValidator<UserData>;\n  private logger: ILogger;\n  private cache: ICache<ProcessedUser>;\n  \n  constructor(\n    validator: IValidator<UserData>,\n    logger: ILogger,\n    cache: ICache<ProcessedUser>\n  ) {\n    this.validator = validator;\n    this.logger = logger;\n    this.cache = cache;\n  }\n  \n  process(data: UserData): ProcessedUser {\n    this.logger.log('Processing user: ' + data.name);\n    \n    const cached = this.cache.get(data.email);\n    if (cached) return cached;\n    \n    if (this.validator.validate(data)) {\n      const processed: ProcessedUser = {\n        displayName: data.name.toUpperCase(),\n        emailDomain: data.email.split('@')[1],\n        isAdult: data.age >= 18,\n        processedAt: new Date()\n      };\n      \n      this.cache.set(data.email, processed);\n      return processed;\n    }\n    \n    throw new Error('Validation failed');\n  }\n}\n\ninterface ProcessedUser {\n  displayName: string;\n  emailDomain: string;\n  isAdult: boolean;\n  processedAt: Date;\n}\n\n// Uso\nconst processor = new UserProcessor(\n  new UserData('', '', 0),\n  console,\n  new Map()\n);\n```",
       "expected_output": "Código TypeScript simplificado eliminando interfaces innecesarias con una sola implementación, convirtiendo clases en funciones simples, eliminando abstracciones prematuras (cache, logger injetado), y haciendo el código directo y legible",
-      "files": []
+      "files": [],
+      "assertions": [
+        {
+          "name": "interfaces_removed",
+          "description": "Se eliminaron interfaces con una sola implementación",
+          "check": "code_not_contains",
+          "pattern": "interface IProcessor|interface IValidator|interface ILogger|interface ICache"
+        },
+        {
+          "name": "functions_not_classes",
+          "description": "El código usa funciones en lugar de clases donde es apropiado",
+          "check": "code_contains",
+          "pattern": "function (process|validate|format)|const (process|validate|format)"
+        },
+        {
+          "name": "no_injection_overhead",
+          "description": "No hay inyección excesiva de dependencias",
+          "check": "code_not_contains",
+          "pattern": "constructor.*validator.*logger|private validator|private logger"
+        },
+        {
+          "name": "max_lines_total",
+          "description": "El archivo tiene menos de 50 líneas",
+          "check": "max_lines",
+          "max_lines": 50
+        }
+      ]
     },
     {
       "id": 3,
       "eval_name": "go-deep-nesting-guard-clauses",
       "prompt": "Refactoriza este código Go que tiene anidamiento profundo de 7 niveles. Aplica KISS y guard clauses siguiendo la filosofía de Linus Torvalds.\n\n```go\npackage main\n\nimport \"errors\"\n\ntype Order struct {\n    ID       string\n    Customer *Customer\n    Items    []Item\n    Payment  *Payment\n    Status   string\n}\n\ntype Customer struct {\n    ID       string\n    IsActive bool\n    Tier     string\n}\n\ntype Item struct {\n    ID       string\n    Price    float64\n    InStock  bool\n}\n\ntype Payment struct {\n    Method    string\n    Processed bool\n    Amount    float64\n}\n\nfunc ProcessOrder(order *Order) (*Order, error) {\n    if order != nil {\n        if order.Status == \"pending\" {\n            if order.Customer != nil {\n                if order.Customer.IsActive {\n                    if len(order.Items) > 0 {\n                        allInStock := true\n                        for _, item := range order.Items {\n                            if !item.InStock {\n                                allInStock = false\n                            }\n                        }\n                        if allInStock {\n                            if order.Payment != nil {\n                                if order.Payment.Processed {\n                                    if order.Payment.Amount > 0 {\n                                        // Procesar orden\n                                        order.Status = \"completed\"\n                                        return order, nil\n                                    }\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n    return nil, errors.New(\"order cannot be processed\")\n}\n```",
       "expected_output": "Código Go con guard clauses que retornan temprano, eliminando el anidamiento profundo, validaciones claras una por una, función simple y legible",
-      "files": []
+      "files": [],
+      "assertions": [
+        {
+          "name": "guard_clauses_used",
+          "description": "Se usan guard clauses con early returns",
+          "check": "code_contains",
+          "pattern": "if.*== nil.*return|if.*!= \"pending\".*return"
+        },
+        {
+          "name": "no_deep_nesting",
+          "description": "No hay más de 2 niveles de anidamiento",
+          "check": "max_nesting_depth",
+          "max_depth": 2
+        },
+        {
+          "name": "max_lines_total",
+          "description": "El archivo tiene menos de 60 líneas",
+          "check": "max_lines",
+          "max_lines": 60
+        }
+      ]
     },
     {
       "id": 4,
       "eval_name": "kotlin-data-class-simplification",
       "prompt": "Simplifica este código Kotlin que tiene clases innecesarias y código duplicado. Aplica YAGNI y KISS.\n\n```kotlin\ninterface Entity<T> {\n    fun getId(): String\n    fun copy(): T\n}\n\ninterface Validatable {\n    fun validate(): Boolean\n}\n\ninterface Serializable {\n    fun toJson(): String\n}\n\nabstract class BaseEntity : Entity<BaseEntity>, Validatable, Serializable {\n    abstract override fun getId(): String\n    abstract override fun validate(): Boolean\n    \n    override fun copy(): BaseEntity {\n        throw NotImplementedError()\n    }\n    \n    override fun toJson(): String {\n        return \"{}\"\n    }\n}\n\nclass UserEntity(\n    private val id: String,\n    private val name: String,\n    private val email: String\n) : BaseEntity() {\n    \n    override fun getId(): String = id\n    \n    override fun validate(): Boolean {\n        return name.isNotBlank() && email.contains(\"@\")\n    }\n    \n    fun getName(): String = name\n    fun getEmail(): String = email\n}\n\nclass ProductEntity(\n    private val id: String,\n    private val title: String,\n    private val price: Double\n) : BaseEntity() {\n    \n    override fun getId(): String = id\n    \n    override fun validate(): Boolean {\n        return title.isNotBlank() && price > 0\n    }\n    \n    fun getTitle(): String = title\n    fun getPrice(): Double = price\n}\n\nfun validateEmail(email: String): Boolean {\n    return email.contains(\"@\") && email.contains(\".\")\n}\n\nfun validateUserEmail(user: UserEntity): Boolean {\n    return user.getEmail().contains(\"@\") && user.getEmail().contains(\".\")\n}\n```",
       "expected_output": "Código Kotlin simplificado usando data classes, eliminando interfaces con una sola implementación, eliminando getters innecesarios, y centralizando validación duplicada",
-      "files": []
+      "files": [],
+      "assertions": [
+        {
+          "name": "data_class_used",
+          "description": "Se usan data classes en lugar de clases regulares",
+          "check": "code_contains",
+          "pattern": "data class User|data class Product"
+        },
+        {
+          "name": "interfaces_removed",
+          "description": "Se eliminaron interfaces innecesarias",
+          "check": "code_not_contains",
+          "pattern": "interface Entity|interface Validatable|interface Serializable|BaseEntity"
+        },
+        {
+          "name": "validation_deduplicated",
+          "description": "La validación de email está centralizada",
+          "check": "code_not_contains",
+          "pattern": "fun validateUserEmail|validateUserEmail"
+        },
+        {
+          "name": "no_explicit_getters",
+          "description": "No hay getters explícitos (data class los genera automáticamente)",
+          "check": "code_not_contains",
+          "pattern": "fun getName|fun getEmail|fun getTitle|fun getPrice"
+        },
+        {
+          "name": "max_lines_total",
+          "description": "El archivo tiene menos de 30 líneas",
+          "check": "max_lines",
+          "max_lines": 30
+        }
+      ]
     },
     {
       "id": 5,
-      "eval_name": "ruby-complex-refactoring",
-      "prompt": "Refactoriza este código Ruby aplicando principios de simplicidad. Tiene múltiples problemas.\n\n```ruby\nclass OrderProcessor\n  def initialize(config, logger, metrics, cache, validator, notifier)\n    @config = config\n    @logger = logger\n    @metrics = metrics\n    @cache = cache\n    @validator = validator\n    @notifier = notifier\n  end\n\n  def process(order, user, payment, shipping, discount_code, referral_code, metadata)\n    @logger.info(\"Processing order for user: #{user.id}\")\n    \n    if @validator.valid?(order)\n      if user.active?\n        if payment.sufficient_funds?(order.total)\n          if shipping.valid_address?\n            discount = calculate_discount(order, discount_code, referral_code, user.tier)\n            \n            total = order.total - discount\n            \n            transaction = process_payment(payment, total)\n            \n            if transaction.success?\n              shipment = create_shipment(order, shipping)\n              \n              if shipment.created?\n                @metrics.record('order.success')\n                @notifier.send(:email, user, :order_confirmed)\n                @notifier.send(:sms, user, :order_confirmed) if user.sms_enabled?\n                @notifier.send(:push, user, :order_confirmed) if user.push_enabled?\n                \n                return {\n                  success: true,\n                  order_id: order.id,\n                  transaction_id: transaction.id,\n                  shipment_id: shipment.id,\n                  total: total,\n                  discount: discount,\n                  metadata: metadata\n                }\n              end\n            end\n          end\n        end\n      end\n    end\n    \n    @metrics.record('order.failure')\n    { success: false }\n  end\n\n  private\n\n  def calculate_discount(order, code, referral, tier)\n    discount = 0\n    discount += 10 if code == 'SAVE10'\n    discount += 5 if referral\n    discount += tier == 'gold' ? 20 : tier == 'silver' ? 10 : 0\n    [discount, order.total * 0.5].min\n  end\n\n  def process_payment(payment, amount)\n    payment.charge(amount)\n  end\n\n  def create_shipment(order, shipping)\n    shipping.create(order)\n  end\nend\n```",
-      "expected_output": "Código Ruby simplificado con: 1) Menos dependencias inyectadas (YAGNI), 2) Guard clauses en lugar de anidamiento, 3) Métodos más pequeños con una sola responsabilidad, 4) Eliminación de notificaciones múltiples no esenciales, 5) Código más directo y legible",
-      "files": []
+      "eval_name": "python-clever-code-simplification",
+      "prompt": "Refactoriza este código Python que usa patrones 'clever' y one-liners crípticos. Conviértelo a código simple y obvio siguiendo la filosofía de Linus Torvalds: 'El código simple es mejor que el código clever'.\n\n```python\nfrom functools import reduce\nfrom operator import itemgetter\n\ndef process_data(data):\n    return [\n        {\n            'name': user['name'].upper() if user.get('name') else 'UNKNOWN',\n            'email': user['email'] if user.get('email') and '@' in user['email'] and '.' in user['email'] else 'invalid@example.com',\n            'active': user['status'] == 'active' if user.get('status') else False,\n            'score': sum([x['value'] for x in user.get('transactions', []) if x.get('value', 0) > 0]) / len([x for x in user.get('transactions', []) if x.get('value', 0) > 0]) if [x for x in user.get('transactions', []) if x.get('value', 0) > 0] else 0,\n            'tier': 'gold' if sum([x['value'] for x in user.get('transactions', [])]) > 10000 else 'silver' if sum([x['value'] for x in user.get('transactions', [])]) > 5000 else 'bronze'\n        }\n        for user in data\n        if user.get('age', 0) >= 18 and user.get('country') in ['US', 'CA', 'MX']\n    ]\n\ndef validate_all(users):\n    return all([\n        u.get('name') and len(u['name']) > 2 and\n        u.get('email') and '@' in u['email'] and '.' in u['email'].split('@')[1] and\n        u.get('age') and 18 <= u['age'] <= 120\n        for u in users\n    ])\n\ndef get_top_users(users, n=10):\n    return sorted(\n        [u for u in users if u.get('transactions')],\n        key=lambda x: sum([t['value'] for t in x['transactions']]),\n        reverse=True\n    )[:n]\n```",
+      "expected_output": "Código Python simplificado donde: 1) Las list comprehensions anidadas se convierten en loops simples, 2) Los operadores ternarios complejos se expanden a if/else claros, 3) Las validaciones complejas en una línea se separan en funciones descriptivas, 4) El código es obvio y legible sin necesidad de descifrar lógica 'clever'",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no_nested_list_comprehensions",
+          "description": "No hay list comprehensions anidadas (código críptico)",
+          "check": "code_not_contains",
+          "pattern": "\[.*\[.*for.*for.*\].*\]|\[.*\[.*\].*for.*\]"
+        },
+        {
+          "name": "no_complex_ternary",
+          "description": "No hay operadores ternarios anidados",
+          "check": "code_not_contains",
+          "pattern": "if.*else.*if.*else"
+        },
+        {
+          "name": "simple_loops_used",
+          "description": "Se usan loops simples (for/while) en lugar de comprehensions complejas",
+          "check": "code_contains",
+          "pattern": "for .* in .*:\\n.*result|for .* in .*:\\n.*append"
+        },
+        {
+          "name": "descriptive_functions",
+          "description": "Las validaciones están en funciones con nombres descriptivos",
+          "check": "code_contains",
+          "pattern": "def _?is_valid|def _?validate_|def _?check_"
+        },
+        {
+          "name": "max_lines_per_function",
+          "description": "Ninguna función tiene más de 20 líneas",
+          "check": "max_function_lines",
+          "max_lines": 20
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "eval_name": "typescript-abstract-factory-overkill",
+      "prompt": "Simplifica este código TypeScript que tiene una arquitectura de fábricas abstractas excesivamente compleja para solo 2 tipos de notificaciones. Aplica KISS y YAGNI - recuerda que no necesitamos abstracciones para 2 casos.\n\n```typescript\n// Abstract Factory Pattern para solo 2 tipos de notificaciones\nabstract class NotificationFactory {\n  abstract createSender(): NotificationSender;\n  abstract createFormatter(): NotificationFormatter;\n  abstract createLogger(): NotificationLogger;\n}\n\ninterface NotificationSender {\n  send(to: string, message: string): Promise<void>;\n}\n\ninterface NotificationFormatter {\n  format(content: string): string;\n}\n\ninterface NotificationLogger {\n  log(notification: Notification): void;\n}\n\ninterface Notification {\n  to: string;\n  content: string;\n  timestamp: Date;\n}\n\n// Email Factory\nclass EmailNotificationFactory extends NotificationFactory {\n  createSender(): NotificationSender {\n    return new EmailSender();\n  }\n  createFormatter(): NotificationFormatter {\n    return new EmailFormatter();\n  }\n  createLogger(): NotificationLogger {\n    return new NotificationLoggerImpl();\n  }\n}\n\n// SMS Factory\nclass SMSNotificationFactory extends NotificationFactory {\n  createSender(): NotificationSender {\n    return new SMSSender();\n  }\n  createFormatter(): NotificationFormatter {\n    return new SMSFormatter();\n  }\n  createLogger(): NotificationLogger {\n    return new NotificationLoggerImpl();\n  }\n}\n\n// Implementaciones Email\nclass EmailSender implements NotificationSender {\n  async send(to: string, message: string): Promise<void> {\n    console.log(`Sending email to ${to}: ${message}`);\n  }\n}\n\nclass EmailFormatter implements NotificationFormatter {\n  format(content: string): string {\n    return `[EMAIL] ${content}`;\n  }\n}\n\n// Implementaciones SMS\nclass SMSSender implements NotificationSender {\n  async send(to: string, message: string): Promise<void> {\n    console.log(`Sending SMS to ${to}: ${message}`);\n  }\n}\n\nclass SMSFormatter implements NotificationFormatter {\n  format(content: string): string {\n    return content.substring(0, 160); // SMS limit\n  }\n}\n\n// Logger compartido\nclass NotificationLoggerImpl implements NotificationLogger {\n  log(notification: Notification): void {\n    console.log(`[${notification.timestamp}] To: ${notification.to}`);\n  }\n}\n\n// Cliente\nclass NotificationService {\n  private factory: NotificationFactory;\n  \n  constructor(factory: NotificationFactory) {\n    this.factory = factory;\n  }\n  \n  async notify(to: string, content: string): Promise<void> {\n    const formatter = this.factory.createFormatter();\n    const sender = this.factory.createSender();\n    const logger = this.factory.createLogger();\n    \n    const formatted = formatter.format(content);\n    await sender.send(to, formatted);\n    logger.log({ to, content: formatted, timestamp: new Date() });\n  }\n}\n\n// Uso\nconst emailService = new NotificationService(new EmailNotificationFactory());\nconst smsService = new NotificationService(new SMSNotificationFactory());\n```",
+      "expected_output": "Código TypeScript simplificado donde: 1) Se eliminan las fábricas abstractas (Abstract Factory) para solo 2 casos, 2) Las interfaces con 1 implementación se eliminan, 3) El código se reduce a funciones simples o clases directas sin jerarquías de herencia, 4) Se mantiene la funcionalidad pero sin sobre-ingeniería",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no_abstract_factory",
+          "description": "No se usa el patrón Abstract Factory (sobre-ingeniería para 2 casos)",
+          "check": "code_not_contains",
+          "pattern": "abstract class.*Factory|extends.*Factory|createSender|createFormatter"
+        },
+        {
+          "name": "no_single_use_interfaces",
+          "description": "No hay interfaces con una sola implementación",
+          "check": "code_not_contains",
+          "pattern": "interface NotificationSender|interface NotificationFormatter|interface NotificationLogger"
+        },
+        {
+          "name": "simple_functions_or_classes",
+          "description": "Se usan funciones simples o clases sin jerarquía de herencia",
+          "check": "code_contains",
+          "pattern": "(function|async function) (send|notify|format)|(class .*Service|class .*Handler)"
+        },
+        {
+          "name": "max_classes",
+          "description": "Máximo 4 clases (evitar sobre-fragmentación)",
+          "check": "max_classes",
+          "max_classes": 4
+        },
+        {
+          "name": "max_lines_total",
+          "description": "El archivo tiene menos de 60 líneas",
+          "check": "max_lines",
+          "max_lines": 60
+        }
+      ]
     }
   ]
 }
+</invoke>
