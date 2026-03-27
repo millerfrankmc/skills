@@ -1,22 +1,22 @@
-# KISS-DRY-YAGNI + Linus Torvalds
+# CodeSlim
 
 [![Skills](https://skills.sh/badge.svg)](https://skills.sh)
 
-> **Code refactoring skill** applying simplicity principles: KISS (Keep It Simple, Stupid), DRY (Don't Repeat Yourself), YAGNI (You Ain't Gonna Need It) and the philosophy of Linus Torvalds.
+> **CodeSlim** - The intelligent code refactoring skill that transforms complex, bloated code into clean, simple, and maintainable solutions. Applies KISS, DRY, YAGNI, and Linus Torvalds philosophy.
 
 ## Installation
 
 ```bash
-npx skills add millerfrankmc/skills/linus-kiss-dry-yagni
+npx skills add millerfrankmc/skills/codeslim
 ```
 
 Supported on: Claude Code, Cursor, Codex, OpenCode, and [more agents](https://skills.sh).
 
 ---
 
-## What this skill does
+## What CodeSlim does
 
-This skill transforms complex and over-engineered code into simple, direct, and maintainable code.
+CodeSlim transforms complex and over-engineered code into simple, direct, and maintainable code.
 
 ### Problems it solves
 
