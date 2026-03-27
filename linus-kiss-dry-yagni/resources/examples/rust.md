@@ -1,15 +1,15 @@
-# Ejemplos Rust
+# Rust Examples
 
 ## Anti-Clever Code
 
-**MAL**:
+**BAD**:
 ```rust
 fn process(items: Vec<Option<&str>>) -> Vec<String> {
     items.iter().filter_map(|x| x.map(|s| s.to_uppercase())).filter(|s| !s.is_empty()).collect()
 }
 ```
 
-**BIEN**:
+**GOOD**:
 ```rust
 fn process_items(items: Vec<Option<&str>>) -> Vec<String> {
     items
@@ -22,9 +22,9 @@ fn process_items(items: Vec<Option<&str>>) -> Vec<String> {
 
 ---
 
-## YAGNI - Eliminar Abstracción Innecesaria
+## YAGNI - Remove Unnecessary Abstraction
 
-**MAL**:
+**BAD**:
 ```rust
 trait Processor<T> {
     fn process(&self, data: T) -> T;
@@ -39,7 +39,7 @@ impl Processor<String> for StringProcessor {
 }
 ```
 
-**BIEN**:
+**GOOD**:
 ```rust
 fn process_string(data: String) -> String {
     data.to_uppercase()
@@ -50,7 +50,7 @@ fn process_string(data: String) -> String {
 
 ## KISS - Guard Clauses
 
-**MAL** (anidado):
+**BAD** (nested):
 ```rust
 fn process_order(order: Option<&Order>) -> Result<(), Error> {
     if let Some(order) = order {
@@ -68,7 +68,7 @@ fn process_order(order: Option<&Order>) -> Result<(), Error> {
 }
 ```
 
-**BIEN** (guard clauses):
+**GOOD** (guard clauses):
 ```rust
 fn process_order(order: Option<&Order>) -> Result<(), Error> {
     let order = order.ok_or(Error::InvalidOrder)?;
@@ -83,9 +83,9 @@ fn process_order(order: Option<&Order>) -> Result<(), Error> {
 
 ---
 
-## DRY - Centralizar
+## DRY - Centralize
 
-**MAL** (duplicado):
+**BAD** (duplicated):
 ```rust
 fn validate_email(email: &str) -> bool {
     email.contains('@') && email.contains('.')
@@ -96,7 +96,7 @@ fn validate_user_email(user: &User) -> bool {
 }
 ```
 
-**BIEN**:
+**GOOD**:
 ```rust
 fn is_valid_email(email: &str) -> bool {
     email.contains('@') && email.contains('.')
@@ -109,9 +109,9 @@ fn validate_user_email(user: &User) -> bool {
 
 ---
 
-## Error Handling Simple
+## Simple Error Handling
 
-**MAL** (over-engineered):
+**BAD** (over-engineered):
 ```rust
 use thiserror::Error;
 
@@ -128,7 +128,7 @@ pub enum UserError {
 pub type Result<T> = std::result::Result<T, UserError>;
 ```
 
-**BIEN**:
+**GOOD**:
 ```rust
 #[derive(Debug)]
 pub enum Error {
@@ -141,16 +141,16 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 ---
 
-## Structs vs Tuplas Nombradas
+## Structs vs Named Tuples
 
-**MAL** (parámetros sueltos):
+**BAD** (loose parameters):
 ```rust
 fn create_user(name: &str, email: &str, age: u32, active: bool) -> User {
-    // ¿Qué orden? ¿Fácil de confundir?
+    // What order? Easy to confuse?
 }
 ```
 
-**BIEN** (struct):
+**GOOD** (struct):
 ```rust
 struct UserData<'a> {
     name: &'a str,
@@ -160,7 +160,7 @@ struct UserData<'a> {
 }
 
 fn create_user(data: UserData) -> User {
-    // Claro y auto-documentado
+    // Clear and self-documenting
 }
 ```
 
@@ -168,7 +168,7 @@ fn create_user(data: UserData) -> User {
 
 ## Match vs if let
 
-**MAL** (match innecesario):
+**BAD** (unnecessary match):
 ```rust
 match maybe_user {
     Some(user) => {
@@ -181,7 +181,7 @@ match maybe_user {
 }
 ```
 
-**BIEN** (if let):
+**GOOD** (if let):
 ```rust
 if let Some(user) = maybe_user {
     if let Some(email) = &user.email {
@@ -192,15 +192,15 @@ if let Some(user) = maybe_user {
 
 ---
 
-## Option/Result - Evitar unwrap
+## Option/Result - Avoid unwrap
 
-**MAL**:
+**BAD**:
 ```rust
 let user = find_user(id).unwrap();
 let email = user.email.unwrap();
 ```
 
-**BIEN**:
+**GOOD**:
 ```rust
 let email = find_user(id)
     .and_then(|u| u.email)

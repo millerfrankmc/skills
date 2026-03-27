@@ -1,164 +1,164 @@
-# Métricas y Límites de Complejidad
+# Metrics and Complexity Limits
 
-Estos son los límites concretos que guían las decisiones de refactorización.
+These are the concrete limits that guide refactoring decisions.
 
-## Límites NO Negociables
+## NON-Negotiable Limits
 
-Si se exceden estos límites, DEBES refactorizar:
+If these limits are exceeded, you MUST refactor:
 
-| Elemento | Límite Máximo | Acción al Exceder |
-|----------|---------------|-------------------|
-| **Líneas por función** | 20 | Dividir en funciones más pequeñas |
-| **Parámetros por función** | 4 | Usar objeto/struct config |
-| **Niveles de anidamiento** | 2 | Usar guard clauses |
-| **Clases por archivo** | 1 | Separar en archivos |
-| **Responsabilidades por función** | 1 | Extraer funciones |
-| **Responsabilidades por clase** | 1 | Dividir en clases |
-| **Duplicación de código** | 0 | Extraer función común |
-| **Interfaces sin uso** | 0 | Eliminar hasta necesitar |
-| **Comentarios explicando "qué"** | 0 | Renombrar código |
-| **Código no usado** | 0 | Eliminar (está en git) |
+| Element | Maximum Limit | Action When Exceeded |
+|---------|---------------|----------------------|
+| **Lines per function** | 20 | Split into smaller functions |
+| **Parameters per function** | 4 | Use object/struct config |
+| **Nesting levels** | 2 | Use guard clauses |
+| **Classes per file** | 1 | Split into files |
+| **Responsibilities per function** | 1 | Extract functions |
+| **Responsibilities per class** | 1 | Split into classes |
+| **Code duplication** | 0 | Extract common function |
+| **Unused interfaces** | 0 | Remove until needed |
+| **Comments explaining "what"** | 0 | Rename code |
+| **Unused code** | 0 | Remove (it's in git) |
 
-## Umbrales de Complejidad (Referencia)
+## Complexity Thresholds (Reference)
 
-| Métrica | Verde ✅ | Amarillo ⚠️ | Rojo ❌ |
-|---------|----------|-------------|---------|
-| **Líneas por función** | 1-20 | 21-50 | 50+ |
-| **Parámetros por función** | 1-3 | 4 | 5+ |
-| **Niveles de anidamiento** | 1-2 | 3 | 4+ |
-| **Complejidad ciclomática** | 1-5 | 6-10 | 10+ |
-| **Dependencias por archivo** | 1-5 | 6-10 | 10+ |
-| **Funciones por clase** | 1-10 | 11-20 | 20+ |
-| **Métodos públicos por clase** | 1-5 | 6-10 | 10+ |
-| **Longitud de nombre** | 5-30 chars | 31-50 | 50+ |
+| Metric | Green ✅ | Yellow ⚠️ | Red ❌ |
+|--------|----------|-----------|--------|
+| **Lines per function** | 1-20 | 21-50 | 50+ |
+| **Parameters per function** | 1-3 | 4 | 5+ |
+| **Nesting levels** | 1-2 | 3 | 4+ |
+| **Cyclomatic complexity** | 1-5 | 6-10 | 10+ |
+| **Dependencies per file** | 1-5 | 6-10 | 10+ |
+| **Functions per class** | 1-10 | 11-20 | 20+ |
+| **Public methods per class** | 1-5 | 6-10 | 10+ |
+| **Name length** | 5-30 chars | 31-50 | 50+ |
 
-## Cómo Medir
+## How to Measure
 
-### Líneas de Código
+### Lines of Code
 
 ```bash
-# Python - contar líneas de función
-wc -l archivo.py
+# Python - count function lines
+wc -l file.py
 
 # JavaScript/TypeScript
-npx cloc archivo.ts
+npx cloc file.ts
 
 # Go
-gocloc archivo.go
+gocloc file.go
 ```
 
-### Complejidad Ciclomática
+### Cyclomatic Complexity
 
 ```bash
 # Python
-radon cc archivo.py -a
+radon cc file.py -a
 
 # JavaScript
-npx complexity-report archivo.js
+npx complexity-report file.js
 
 # Go
-gocyclo archivo.go
+gocyclo file.go
 ```
 
-### Niveles de Anidamiento
+### Nesting Levels
 
-Contar manualmente los niveles máximos de:
+Manually count maximum levels of:
 - `if` / `else` / `elif`
 - `for` / `while`
 - `try` / `catch` / `finally`
 - `switch` / `case`
-- Funciones anidadas
+- Nested functions
 
-### Parámetros
+### Parameters
 
 ```bash
-# Contar en Python
-grep -E "^def \w+\(" archivo.py
+# Count in Python
+grep -E "^def \w+\(" file.py
 
-# Contar en TypeScript
-grep -E "function \w+\(|\w+\(.*:" archivo.ts
+# Count in TypeScript
+grep -E "function \w+\(|\w+\(.*:" file.ts
 ```
 
-## Reglas de Decisión
+## Decision Rules
 
-### Cuándo Extraer una Función
+### When to Extract a Function
 
-Extraer función si:
-- [ ] Tiene >20 líneas
-- [ ] Hace 2+ cosas diferentes
-- [ ] Tiene comentario explicando una sección
-- [ ] Tiene código que podría reusarse
-- [ ] Es difícil de nombrar claramente
+Extract function if:
+- [ ] Has >20 lines
+- [ ] Does 2+ different things
+- [ ] Has comment explaining a section
+- [ ] Has code that could be reused
+- [ ] Is difficult to name clearly
 
-### Cuándo Usar un Objeto Config
+### When to Use a Config Object
 
-Usar objeto/struct si:
-- [ ] Función tiene >4 parámetros
-- [ ] Parámetros son opcionales
-- [ ] Parámetros pertenecen a un concepto
-- [ ] Se pasan juntos frecuentemente
+Use object/struct if:
+- [ ] Function has >4 parameters
+- [ ] Parameters are optional
+- [ ] Parameters belong to a concept
+- [ ] They are frequently passed together
 
-### Cuándo Eliminar una Interface
+### When to Remove an Interface
 
-Eliminar interface si:
-- [ ] Tiene solo 1 implementación
-- [ ] No hay planes de segunda implementación
-- [ ] Agrega indirección sin valor
+Remove interface if:
+- [ ] Has only 1 implementation
+- [ ] No plans for second implementation
+- [ ] Adds indirection without value
 
-### Cuándo Aplicar Guard Clauses
+### When to Apply Guard Clauses
 
-Aplicar guard clauses si:
-- [ ] Hay >2 niveles de anidamiento
-- [ ] La función retorna temprano en casos de error
-- [ ] Hay validaciones al inicio que anidan el código real
+Apply guard clauses if:
+- [ ] Has >2 nesting levels
+- [ ] Function returns early in error cases
+- [ ] Has validations at the beginning that nest the real code
 
-## Ejemplos de Cálculo
+## Calculation Examples
 
-### Ejemplo 1: Función con 25 líneas
+### Example 1: Function with 25 lines
 
 ```python
-def process_user(data):  # Línea 1
-    if not data:         # Línea 2
-        return None      # Línea 3
+def process_user(data):  # Line 1
+    if not data:         # Line 2
+        return None      # Line 3
 
-    validated = validate(data)   # Línea 4
-    if not validated:            # Línea 5
-        return None              # Línea 6
+    validated = validate(data)   # Line 4
+    if not validated:            # Line 5
+        return None              # Line 6
 
-    transformed = transform(validated)   # Línea 7
-    saved = save(transformed)            # Línea 8
-    notified = notify(saved)             # Línea 9
-    logged = log(notified)               # Línea 10
+    transformed = transform(validated)   # Line 7
+    saved = save(transformed)            # Line 8
+    notified = notify(saved)             # Line 9
+    logged = log(notified)               # Line 10
 
-    return logged        # Línea 11
+    return logged        # Line 11
 ```
 
-**Total**: 11 líneas (✅ Dentro del límite)
+**Total**: 11 lines (✅ Within limit)
 
-### Ejemplo 2: Función con 5 parámetros
+### Example 2: Function with 5 parameters
 
 ```python
-# ❌ ANTES: 5 parámetros
+# ❌ BEFORE: 5 parameters
 def create_user(name, email, phone, address, is_active):
     pass
 
-# ✅ DESPUÉS: 1 objeto
+# ✅ AFTER: 1 object
 def create_user(data: UserData):
     pass
 ```
 
-### Ejemplo 3: Anidamiento de 4 niveles
+### Example 3: 4 levels of nesting
 
 ```python
-# ❌ ANTES: 4 niveles
+# ❌ BEFORE: 4 levels
 def process(order):
-    if order:                    # Nivel 1
-        if order.valid:          # Nivel 2
-            if order.payment:    # Nivel 3
-                if order.paid:   # Nivel 4
+    if order:                    # Level 1
+        if order.valid:          # Level 2
+            if order.payment:    # Level 3
+                if order.paid:   # Level 4
                     fulfill(order)
 
-# ✅ DESPUÉS: 1 nivel
+# ✅ AFTER: 1 level
 def process(order):
     if not order: return
     if not order.valid: return
@@ -167,29 +167,29 @@ def process(order):
     fulfill(order)
 ```
 
-## Anti-Patrones de Métricas
+## Metrics Anti-Patterns
 
-### No optimices métricas por métricas
+### Don't optimize metrics for metrics' sake
 
-**Mal:**
+**Bad:**
 ```python
-# Dividir función solo para tener menos líneas
+# Split function just to have fewer lines
 def process_part1():
-    # 10 líneas
+    # 10 lines
     pass
 
 def process_part2():
-    # 10 líneas
+    # 10 lines
     pass
 
 def process_part3():
-    # 10 líneas
+    # 10 lines
     pass
 ```
 
-**Bien:**
+**Good:**
 ```python
-# Dividir por responsabilidad
+# Split by responsibility
 def validate():
     pass
 
@@ -200,23 +200,23 @@ def save():
     pass
 ```
 
-### No ignores el contexto
+### Don't ignore context
 
-Algunas funciones legítimamente necesitan más líneas:
-- Mappers de configuración
-- Validadores complejos
-- Algoritmos matemáticos
+Some functions legitimately need more lines:
+- Configuration mappers
+- Complex validators
+- Mathematical algorithms
 
-Pero deben ser la excepción, no la regla.
+But they should be the exception, not the rule.
 
-## Métricas de Calidad Final
+## Final Quality Metrics
 
-Después de aplicar KISS-DRY-YAGNI, el código debe:
+After applying KISS-DRY-YAGNI, code should:
 
-- [ ] Cumplir todos los límites de complejidad
-- [ ] Ser entendible sin explicaciones
-- [ ] Ser testeable sin mocks complejos
-- [ ] Ser modificable sin miedo
-- [ ] Tener <5% de duplicación de código
-- [ ] Tener 0 interfaces con 1 implementación
-- [ ] Tener 0 código no usado
+- [ ] Meet all complexity limits
+- [ ] Be understandable without explanations
+- [ ] Be testable without complex mocks
+- [ ] Be modifiable without fear
+- [ ] Have <5% code duplication
+- [ ] Have 0 interfaces with 1 implementation
+- [ ] Have 0 unused code

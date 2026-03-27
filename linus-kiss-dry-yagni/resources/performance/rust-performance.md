@@ -1,15 +1,15 @@
-# Rendimiento Específico - Rust
+# Performance Specific - Rust
 
-> Guía de optimizaciones de rendimiento para código Rust. NUNCA sacrificar rendimiento obvio por "código más limpio".
+> Guide for performance optimizations in Rust code. NEVER sacrifice obvious performance for "cleaner code".
 
 ---
 
 ## 1. Zero-Cost Abstractions
 
-### El Problema
+### The Problem
 
 ```rust
-// ❌ INEFICIENTE - Abstracciones con runtime cost
+// ❌ INEFFICIENT - Abstractions with runtime cost
 fn process_items(items: &[Item]) {
     let mut result = vec![];
     for item in items {
@@ -19,16 +19,16 @@ fn process_items(items: &[Item]) {
     }
 }
 
-// ❌ INEFICIENTE - Box innecesario
+// ❌ INEFFICIENT - Unnecessary Box
 fn get_value() -> Box<i32> {
-    Box::new(42) // Allocación en heap innecesaria
+    Box::new(42) // Unnecessary heap allocation
 }
 ```
 
-### La Solución
+### The Solution
 
 ```rust
-// ✅ CORRECTO - Iterators son zero-cost abstractions
+// ✅ CORRECT - Iterators are zero-cost abstractions
 fn process_items(items: &[Item]) -> Vec<i32> {
     items
         .iter()
@@ -36,35 +36,35 @@ fn process_items(items: &[Item]) -> Vec<i32> {
         .map(|item| item.value * 2)
         .collect()
 }
-// Compila a código equivalente al loop manual
+// Compiles to code equivalent to manual loop
 
-// ✅ CORRECTO - Stack allocation
+// ✅ CORRECT - Stack allocation
 fn get_value() -> i32 {
-    42 // Stack, sin overhead
+    42 // Stack, no overhead
 }
 
-// ✅ CORRECTO - Const generics para especialización
+// ✅ CORRECT - Const generics for specialization
 struct Array<T, const N: usize> {
-    data: [T; N], // Tamaño conocido en compile-time
+    data: [T; N], // Size known at compile-time
 }
 
-// Cada tamaño es un tipo diferente optimizado
+// Each size is a different optimized type
 let a: Array<i32, 3> = Array { data: [1, 2, 3] };
 let b: Array<i32, 100> = Array { data: [0; 100] };
 
-// ✅ CORRECTO - Macros para código generado
+// ✅ CORRECT - Macros for generated code
 macro_rules! impl_add {
     ($($t:ty),*) => {
         $(
             impl Add for $t {
-                // ... implementación
+                // ... implementation
             }
         )*
     };
 }
 
 impl_add!(i8, i16, i32, i64, i128, isize);
-// Genera código específico para cada tipo en compile-time
+// Generates specific code for each type at compile-time
 ```
 
 ---
@@ -72,42 +72,42 @@ impl_add!(i8, i16, i32, i64, i128, isize);
 ## 2. Iterator vs Loops
 
 ```rust
-// ❌ INEFICIENTE - Loop manual con index
+// ❌ INEFFICIENT - Manual loop with index
 fn sum_values(items: &[i32]) -> i32 {
     let mut sum = 0;
     for i in 0..items.len() {
-        sum += items[i]; // Bounds check en cada acceso
+        sum += items[i]; // Bounds check on each access
     }
     sum
 }
 
-// ✅ CORRECTO - Iterators optimizados
+// ✅ CORRECT - Optimized iterators
 fn sum_values(items: &[i32]) -> i32 {
-    items.iter().sum() // Sin bounds checks
+    items.iter().sum() // No bounds checks
 }
 
-// ✅ CORRECTO - Iterators con fold
+// ✅ CORRECT - Iterators with fold
 fn process_with_state(items: &[i32]) -> i32 {
     items.iter().fold(0, |acc, &x| {
         acc + x * 2
     })
 }
 
-// ✅ CORRECTO - for_each para side effects
+// ✅ CORRECT - for_each for side effects
 items.iter().for_each(|item| {
     process(item);
 });
 
-// ✅ CORRECTO - Chaining eficiente
+// ✅ CORRECT - Efficient chaining
 let result: Vec<_> = items
     .par_iter()        // Parallel iterator (rayon)
     .filter(|x| x > &&0)
     .map(|x| x * 2)
     .collect();
 
-// ✅ CORRECTO - IntoIterator para mover ownership
+// ✅ CORRECT - IntoIterator for moving ownership
 fn consume_items(items: Vec<Item>) {
-    // into_iter() mueve los elementos, no copia
+    // into_iter() moves elements, doesn't copy
     for item in items {
         process_owned(item);
     }
@@ -116,41 +116,41 @@ fn consume_items(items: Vec<Item>) {
 
 ---
 
-## 3. Borrowing y Ownership
+## 3. Borrowing and Ownership
 
 ```rust
-// ❌ INEFICIENTE - Clonado innecesario
+// ❌ INEFFICIENT - Unnecessary cloning
 fn process_data(data: String) {
-    let copy = data.clone(); // Duplicación innecesaria
-    // usar copy...
+    let copy = data.clone(); // Unnecessary duplication
+    // use copy...
 }
 
-// ✅ CORRECTO - Borrowing inmutable
-fn process_data(data: &str) { // String slice, no owned
-    // usar data sin copiar...
+// ✅ CORRECT - Immutable borrowing
+fn process_data(data: &str) { // String slice, not owned
+    // use data without copying...
 }
 
-// ✅ CORRECTO - Cow (Clone on Write)
+// ✅ CORRECT - Cow (Clone on Write)
 use std::borrow::Cow;
 
 fn format_message(input: &str) -> Cow<str> {
     if input.contains("special") {
-        // Solo clonar si es necesario modificar
+        // Only clone if modification needed
         Cow::Owned(input.replace("special", "normal"))
     } else {
-        // Usar referencia sin copiar
+        // Use reference without copying
         Cow::Borrowed(input)
     }
 }
 
-// ✅ CORRECTO - Slices en lugar de referencias a Vecs
-// ❌ Pide Vec específico
+// ✅ CORRECT - Slices instead of Vec references
+// ❌ Asks for specific Vec
 fn process_vec(items: &Vec<i32>) {}
 
-// ✅ Acepta cualquier slice
+// ✅ Accepts any slice
 fn process_slice(items: &[i32]) {}
 
-// ✅ CORRECTO - Lifetime elision
+// ✅ CORRECT - Lifetime elision
 fn first_word(s: &str) -> &str { // Elided lifetimes
     s.split_whitespace().next().unwrap_or(s)
 }
@@ -161,16 +161,16 @@ fn first_word(s: &str) -> &str { // Elided lifetimes
 ## 4. Arc vs Rc vs Box
 
 ```rust
-// ✅ CORRECTO - Box para owned heap data
+// ✅ CORRECT - Box for owned heap data
 let data: Box<[u8]> = vec![1, 2, 3].into_boxed_slice();
 
-// ✅ CORRECTO - Rc para shared ownership (single-threaded)
+// ✅ CORRECT - Rc for shared ownership (single-threaded)
 use std::rc::Rc;
 
 let data: Rc<Vec<i32>> = Rc::new(vec![1, 2, 3]);
-let data2 = Rc::clone(&data); // Solo incrementa refcount
+let data2 = Rc::clone(&data); // Just increments refcount
 
-// ✅ CORRECTO - Arc para shared ownership (multi-threaded)
+// ✅ CORRECT - Arc for shared ownership (multi-threaded)
 use std::sync::Arc;
 use std::thread;
 
@@ -183,22 +183,22 @@ for _ in 0..4 {
     });
 }
 
-// ✅ CORRECTO - Weak para evitar ciclos
+// ✅ CORRECT - Weak to avoid cycles
 use std::rc::{Rc, Weak};
 
 struct Node {
-    parent: Option<Weak<Node>>, // Weak evita ciclos
+    parent: Option<Weak<Node>>, // Weak avoids cycles
     children: Vec<Rc<Node>>,
 }
 
-// ✅ CORRECTO - RefCell para interior mutability
+// ✅ CORRECT - RefCell for interior mutability
 use std::cell::RefCell;
 
 let data = RefCell::new(vec![1, 2, 3]);
 {
     let mut mut_ref = data.borrow_mut();
     mut_ref.push(4);
-} // Ref mut se libera aquí
+} // Ref mut released here
 
 let immut_ref = data.borrow();
 println!("{:?}", *immut_ref);
@@ -206,16 +206,16 @@ println!("{:?}", *immut_ref);
 
 ---
 
-## 5. SIMD con packed_simd
+## 5. SIMD with packed_simd
 
 ```rust
-// ✅ CORRECTO - SIMD para operaciones vectoriales
+// ✅ CORRECT - SIMD for vector operations
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
-// Sumar arrays con SIMD
+// Sum arrays with SIMD
 pub unsafe fn simd_sum(a: &[f32], b: &[f32], result: &mut [f32]) {
-    // Procesar 4 f32 a la vez con AVX
+    // Process 4 f32 at once with AVX
     for i in (0..a.len()).step_by(4) {
         let va = _mm_loadu_ps(a.as_ptr().add(i));
         let vb = _mm_loadu_ps(b.as_ptr().add(i));
@@ -224,7 +224,7 @@ pub unsafe fn simd_sum(a: &[f32], b: &[f32], result: &mut [f32]) {
     }
 }
 
-// ✅ CORRECTO - portable_simd (nightly)
+// ✅ CORRECT - portable_simd (nightly)
 #![feature(portable_simd)]
 use std::simd::f32x4;
 
@@ -240,23 +240,23 @@ fn simd_average(values: &[f32]) -> f32 {
     total / values.len() as f32
 }
 
-// ✅ CORRECTO - Auto-vectorización
-// Rust puede auto-vectorizar loops simples
+// ✅ CORRECT - Auto-vectorization
+// Rust can auto-vectorize simple loops
 fn auto_vectorized_sum(values: &[f32]) -> f32 {
-    values.iter().sum() // LLVM puede vectorizar esto
+    values.iter().sum() // LLVM can vectorize this
 }
 ```
 
 ---
 
-## 6. Lifetimes y Zero-Copy Parsing
+## 6. Lifetimes and Zero-Copy Parsing
 
 ```rust
-// ✅ CORRECTO - Zero-copy parsing con lifetimes
+// ✅ CORRECT - Zero-copy parsing with lifetimes
 #[derive(Debug)]
 struct ParsedRecord<'a> {
-    name: &'a str,    // Referencia al buffer original
-    value: &'a str,   // Sin copias
+    name: &'a str,    // Reference to original buffer
+    value: &'a str,   // No copies
 }
 
 fn parse_record<'a>(input: &'a str) -> Option<ParsedRecord<'a>> {
@@ -267,7 +267,7 @@ fn parse_record<'a>(input: &'a str) -> Option<ParsedRecord<'a>> {
     })
 }
 
-// ✅ CORRECTO - nom para parsing sin allocaciones
+// ✅ CORRECT - nom for parsing without allocations
 use nom::{
     IResult,
     bytes::complete::tag,
@@ -290,19 +290,19 @@ fn parse_point(input: &str) -> IResult<&str, (i32, i32)> {
     )))
 }
 
-// ✅ CORRECTO - Memmap para archivos grandes
+// ✅ CORRECT - Memmap for large files
 use memmap::MmapOptions;
 use std::fs::File;
 
 fn process_large_file(path: &str) {
     let file = File::open(path).unwrap();
 
-    // Mapear archivo a memoria (zero-copy)
+    // Map file to memory (zero-copy)
     let mmap = unsafe {
         MmapOptions::new().map(&file).unwrap()
     };
 
-    // Procesar directamente del mmap
+    // Process directly from mmap
     for line in mmap.split(|&b| b == b'\n') {
         process_line(line);
     }
@@ -311,18 +311,18 @@ fn process_large_file(path: &str) {
 
 ---
 
-## 7. Async/Await con Tokio
+## 7. Async/Await with Tokio
 
 ```rust
 use tokio::time::{sleep, Duration};
 use tokio::task;
 
-// ✅ CORRECTO - Async I/O eficiente
+// ✅ CORRECT - Efficient async I/O
 async fn fetch_all(urls: Vec<String>) -> Vec<Result<String, Error>> {
-    // Crear futures para todas las requests
+    // Create futures for all requests
     let futures = urls.into_iter().map(|url| fetch(url));
 
-    // Ejecutar todas concurrentemente
+    // Execute all concurrently
     futures::future::join_all(futures).await
 }
 
@@ -331,12 +331,12 @@ async fn fetch(url: String) -> Result<String, Error> {
     response.text().await
 }
 
-// ✅ CORRECTO - Spawn para paralelismo real
+// ✅ CORRECT - Spawn for real parallelism
 async fn process_parallel(items: Vec<Item>) -> Vec<Result> {
     let mut handles = vec![];
 
     for item in items {
-        // Cada task puede ejecutar en thread diferente
+        // Each task can run on different thread
         let handle = task::spawn(async move {
             process(item).await
         });
@@ -351,11 +351,11 @@ async fn process_parallel(items: Vec<Item>) -> Vec<Result> {
     results
 }
 
-// ✅ CORRECTO - Channels para comunicación
+// ✅ CORRECT - Channels for communication
 use tokio::sync::mpsc;
 
 async fn producer_consumer() {
-    let (tx, mut rx) = mpsc::channel(100); // Buffer de 100
+    let (tx, mut rx) = mpsc::channel(100); // Buffer of 100
 
     // Producer
     tokio::spawn(async move {
@@ -370,7 +370,7 @@ async fn producer_consumer() {
     }
 }
 
-// ✅ CORRECTO - Semaphore para limitar concurrencia
+// ✅ CORRECT - Semaphore to limit concurrency
 use tokio::sync::Semaphore;
 use std::sync::Arc;
 
@@ -391,7 +391,7 @@ async fn limited_concurrency(urls: Vec<String>, max: usize) {
 
 ---
 
-## 8. Profiling con cargo flamegraph
+## 8. Profiling with cargo flamegraph
 
 ```toml
 # Cargo.toml
@@ -400,7 +400,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 ```
 
 ```rust
-// ✅ CORRECTO - Benchmarks con Criterion
+// ✅ CORRECT - Benchmarks with Criterion
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 fn fibonacci(n: u64) -> u64 {
@@ -420,13 +420,13 @@ fn criterion_benchmark(c: &mut Criterion) {
 criterion_group!(benches, criterion_benchmark);
 criterion_main!(benches);
 
-// Ejecutar: cargo bench
+// Run: cargo bench
 
-// ✅ CORRECTO - Flamegraph
+// ✅ CORRECT - Flamegraph
 // cargo install flamegraph
 // cargo flamegraph --bin myapp
 
-// ✅ CORRECTO - Perf + Cachegrind
+// ✅ CORRECT - Perf + Cachegrind
 // cargo build --release
 // perf record ./target/release/myapp
 // perf report
@@ -436,44 +436,44 @@ criterion_main!(benches);
 
 ---
 
-## Checklist Rust Específico
+## Rust Specific Checklist
 
 ### Ownership
-- [ ] Borrowing en lugar de clonar
-- [ ] Cow para Clone on Write
-- [ ] Slices (&[T]) en lugar de &Vec<T>
+- [ ] Borrowing instead of cloning
+- [ ] Cow for Clone on Write
+- [ ] Slices (&[T]) instead of &Vec<T>
 
 ### Smart Pointers
-- [ ] Box para owned heap
-- [ ] Rc para single-threaded shared
-- [ ] Arc para multi-threaded shared
-- [ ] RefCell para interior mutability
+- [ ] Box for owned heap
+- [ ] Rc for single-threaded shared
+- [ ] Arc for multi-threaded shared
+- [ ] RefCell for interior mutability
 
 ### Iterators
-- [ ] Iterators en lugar de loops indexados
+- [ ] Iterators instead of index loops
 - [ ] fold, map, filter chain
-- [ ] into_iter() para mover ownership
+- [ ] into_iter() for moving ownership
 
-### Rendimiento
+### Performance
 - [ ] Release builds (--release)
-- [ ] Criterion para benchmarks
-- [ ] Flamegraph para profiling
-- [ ] #[inline] para funciones pequeñas
+- [ ] Criterion for benchmarks
+- [ ] Flamegraph for profiling
+- [ ] #[inline] for small functions
 
 ### Async
-- [ ] Tokio para async runtime
-- [ ] join_all para concurrencia
-- [ ] spawn para paralelismo
-- [ ] Channels para comunicación
+- [ ] Tokio for async runtime
+- [ ] join_all for concurrency
+- [ ] spawn for parallelism
+- [ ] Channels for communication
 
 ### Zero-Copy
-- [ ] Lifetimes para referencias
-- [ ] nom/memmap para parsing
-- [ ] evitar allocaciones innecesarias
+- [ ] Lifetimes for references
+- [ ] nom/memmap for parsing
+- [ ] Avoid unnecessary allocations
 
 ---
 
-## Referencias
+## References
 
 - [Rust Performance Book](https://nnethercote.github.io/perf-book/)
 - [The Rustonomicon](https://doc.rust-lang.org/nomicon/)

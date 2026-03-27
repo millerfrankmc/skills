@@ -1,21 +1,21 @@
-# Rendimiento Específico - Python
+# Performance Specific - Python
 
-> Guía de optimizaciones de rendimiento para código Python. NUNCA sacrificar rendimiento obvio por "código más limpio".
+> Guide for performance optimizations in Python code. NEVER sacrifice obvious performance for "cleaner code".
 
 ---
 
-## 1. GIL y Concurrencia
+## 1. GIL and Concurrency
 
-### El Problema: Global Interpreter Lock (GIL)
+### The Problem: Global Interpreter Lock (GIL)
 
 ```python
-# ❌ INEFICIENTE - Threads para CPU-intensive (no paralelismo real)
+# ❌ INEFFICIENT - Threads for CPU-intensive (no real parallelism)
 import threading
 
 def cpu_intensive(n):
     return sum(i * i for i in range(n))
 
-# GIL evita paralelismo real - solo un thread ejecuta a la vez
+# GIL prevents real parallelism - only one thread executes at a time
 threads = [
     threading.Thread(target=cpu_intensive, args=(10_000_000,))
     for _ in range(4)
@@ -26,27 +26,27 @@ for t in threads:
     t.join()
 ```
 
-### La Solución
+### The Solution
 
 ```python
-# ✅ CORRECTO - Multiprocessing para CPU-intensive
+# ✅ CORRECT - Multiprocessing for CPU-intensive
 from multiprocessing import Pool
 
 def cpu_intensive(n):
     return sum(i * i for i in range(n))
 
-# Paralelismo real con procesos separados
+# Real parallelism with separate processes
 with Pool(processes=4) as pool:
     results = pool.map(cpu_intensive, [10_000_000] * 4)
 
-# ✅ CORRECTO - Threads solo para I/O-bound
+# ✅ CORRECT - Threads only for I/O-bound
 import requests
 from concurrent.futures import ThreadPoolExecutor
 
 def fetch_url(url):
     return requests.get(url).content
 
-# Threads son eficientes para I/O (liberan GIL durante espera)
+# Threads are efficient for I/O (release GIL during wait)
 urls = ['https://api.example.com/data'] * 10
 with ThreadPoolExecutor(max_workers=5) as executor:
     results = list(executor.map(fetch_url, urls))
@@ -54,32 +54,32 @@ with ThreadPoolExecutor(max_workers=5) as executor:
 
 ---
 
-## 2. Generadores vs Listas
+## 2. Generators vs Lists
 
 ```python
-# ❌ INEFICIENTE - Lista completa en memoria
+# ❌ INEFFICIENT - Full list in memory
 def process_large_file(filename):
-    lines = open(filename).readlines()  # Toda la lista en memoria
+    lines = open(filename).readlines()  # Entire list in memory
     for line in lines:
         yield line.strip().upper()
 
-# ✅ CORRECTO - Generador (memoria constante)
+# ✅ CORRECT - Generator (constant memory)
 def process_large_file(filename):
     with open(filename) as f:
-        for line in f:  # Una línea a la vez
+        for line in f:  # One line at a time
             yield line.strip().upper()
 
-# ✅ CORRECTO - Generator expressions
-# Lista: consume toda la memoria
+# ✅ CORRECT - Generator expressions
+# List: consumes all memory
 squares_list = [x**2 for x in range(1_000_000)]
 
-# Generador: lazy evaluation, memoria constante
+# Generator: lazy evaluation, constant memory
 squares_gen = (x**2 for x in range(1_000_000))
 
-# ✅ CORRECTO - itertools para operaciones eficientes
+# ✅ CORRECT - itertools for efficient operations
 from itertools import islice, chain
 
-# Procesar en chunks sin crear lista completa
+# Process in chunks without creating full list
 def chunked(iterable, n):
     iterator = iter(iterable)
     while chunk := list(islice(iterator, n)):
@@ -88,20 +88,20 @@ def chunked(iterable, n):
 
 ---
 
-## 3. Asyncio y Async/Await
+## 3. Asyncio and Async/Await
 
 ```python
-# ❌ INEFICIENTE - Requests síncronos secuenciales
+# ❌ INEFFICIENT - Sequential synchronous requests
 import requests
 
 async def fetch_all_urls(urls):
     results = []
     for url in urls:
-        resp = requests.get(url)  # Bloquea cada vez
+        resp = requests.get(url)  # Blocks each time
         results.append(resp.json())
     return results
 
-# ✅ CORRECTO - aiohttp para I/O concurrente
+# ✅ CORRECT - aiohttp for concurrent I/O
 import aiohttp
 import asyncio
 
@@ -114,10 +114,10 @@ async def fetch_one(session, url):
     async with session.get(url) as resp:
         return await resp.json()
 
-# Ejecución
+# Execution
 results = asyncio.run(fetch_all_urls(urls))
 
-# ✅ CORRECTO - async para operaciones de DB
+# ✅ CORRECT - async for DB operations
 import aiopg
 
 async def get_users_async(user_ids):
@@ -130,37 +130,37 @@ async def get_users_async(user_ids):
 
 ---
 
-## 4. Comprensiones vs Loops
+## 4. Comprehensions vs Loops
 
 ```python
-# ❌ INEFICIENTE - Loop con append
+# ❌ INEFFICIENT - Loop with append
 result = []
 for x in range(1000):
     if x % 2 == 0:
         result.append(x * 2)
 
-# ✅ CORRECTO - List comprehension (más rápido)
+# ✅ CORRECT - List comprehension (faster)
 result = [x * 2 for x in range(1000) if x % 2 == 0]
 
-# ✅ CORRECTO - Dict comprehension
-# Loop tradicional
+# ✅ CORRECT - Dict comprehension
+# Traditional loop
 mapping = {}
 for key, value in pairs:
     mapping[key] = value
 
-# Dict comprehension (más rápido y claro)
+# Dict comprehension (faster and clearer)
 mapping = {key: value for key, value in pairs}
 
-# ✅ CORRECTO - setdefault vs defaultdict
+# ✅ CORRECT - setdefault vs defaultdict
 from collections import defaultdict
 
-# ❌ Lento: busca la key múltiples veces
+# ❌ Slow: looks up key multiple times
 for key, value in items:
     if key not in groups:
         groups[key] = []
     groups[key].append(value)
 
-# ✅ Rápido: defaultdict
+# ✅ Fast: defaultdict
 groups = defaultdict(list)
 for key, value in items:
     groups[key].append(value)
@@ -168,31 +168,31 @@ for key, value in items:
 
 ---
 
-## 5. Caching con functools.lru_cache
+## 5. Caching with functools.lru_cache
 
 ```python
 from functools import lru_cache
 
-# ❌ INEFICIENTE - Recalcula fibonacci exponencialmente
+# ❌ INEFFICIENT - Recalculates fibonacci exponentially
 def fibonacci(n):
     if n < 2:
         return n
     return fibonacci(n - 1) + fibonacci(n - 2)
 
-# ✅ CORRECTO - Memoización automática
+# ✅ CORRECT - Automatic memoization
 @lru_cache(maxsize=128)
 def fibonacci(n):
     if n < 2:
         return n
     return fibonacci(n - 1) + fibonacci(n - 2)
 
-# ✅ CORRECTO - Cache para operaciones costosas
+# ✅ CORRECT - Cache for expensive operations
 @lru_cache(maxsize=1024)
 def get_user_from_db(user_id: int) -> dict:
-    # Costoso: query a base de datos
+    # Expensive: database query
     return db.query(User).get(user_id).to_dict()
 
-# ✅ CORRECTO - Cache con TTL (time-to-live)
+# ✅ CORRECT - Cache with TTL (time-to-live)
 from functools import lru_cache
 import time
 
@@ -215,40 +215,40 @@ def ttl_cache(maxsize=128, ttl=60):
 
 ---
 
-## 6. Perfilamiento con cProfile
+## 6. Profiling with cProfile
 
 ```python
-# ✅ CORRECTO - Identificar cuellos de botella
+# ✅ CORRECT - Identify bottlenecks
 import cProfile
 import pstats
 
 def function_to_profile():
-    # Código a analizar
+    # Code to analyze
     pass
 
-# Perfilado
+# Profiling
 profiler = cProfile.Profile()
 profiler.enable()
 function_to_profile()
 profiler.disable()
 
-# Reporte ordenado por tiempo acumulado
+# Report sorted by cumulative time
 stats = pstats.Stats(profiler)
 stats.sort_stats('cumulative')
-stats.print_stats(20)  # Top 20 funciones
+stats.print_stats(20)  # Top 20 functions
 
-# ✅ CORRECTO - line_profiler para análisis línea por línea
-# @profile decorator (ejecutar con kernprof -l -v script.py)
+# ✅ CORRECT - line_profiler for line-by-line analysis
+# @profile decorator (run with kernprof -l -v script.py)
 @profile
 def slow_function():
-    a = [i for i in range(100000)]  # Línea lenta
+    a = [i for i in range(100000)]  # Slow line
     b = [i * 2 for i in a]
     return sum(b)
 
-# ✅ CORRECTO - timeit para micro-benchmarks
+# ✅ CORRECT - timeit for micro-benchmarks
 import timeit
 
-# Comparar dos implementaciones
+# Compare two implementations
 time_list = timeit.timeit('"-".join(str(n) for n in range(100))', number=10000)
 time_gen = timeit.timeit('"-".join(map(str, range(100)))', number=10000)
 print(f"List comp: {time_list:.4f}s, Map: {time_gen:.4f}s")
@@ -256,33 +256,33 @@ print(f"List comp: {time_list:.4f}s, Map: {time_gen:.4f}s")
 
 ---
 
-## 7. N+1 Queries con SQLAlchemy/Django ORM
+## 7. N+1 Queries with SQLAlchemy/Django ORM
 
 ```python
-# ❌ PROHIBIDO - N+1 Queries
+# ❌ PROHIBITED - N+1 Queries
 # Django
 for user in User.objects.all():
-    print(user.profile.bio)  # Query adicional por cada usuario
+    print(user.profile.bio)  # Additional query per user
 
 # SQLAlchemy
 users = session.query(User).all()
 for user in users:
-    print(user.orders)  # Query adicional por cada usuario
+    print(user.orders)  # Additional query per user
 
-# ✅ CORRECTO - select_related (JOIN en una query)
+# ✅ CORRECT - select_related (JOIN in one query)
 # Django
 users = User.objects.select_related('profile').all()
 for user in users:
-    print(user.profile.bio)  # Sin query adicional
+    print(user.profile.bio)  # No additional query
 
-# ✅ CORRECTO - prefetch_related (queries separadas + caché)
+# ✅ CORRECT - prefetch_related (separate queries + cache)
 # Django
 users = User.objects.prefetch_related('orders').all()
 for user in users:
     for order in user.orders.all():
         print(order.total)
 
-# ✅ CORRECTO - joinedload en SQLAlchemy
+# ✅ CORRECT - joinedload in SQLAlchemy
 from sqlalchemy.orm import joinedload
 
 users = session.query(User).options(
@@ -290,52 +290,52 @@ users = session.query(User).options(
     joinedload(User.orders)
 ).all()
 
-# ✅ CORRECTO - bulk operations
-# ❌ Lento: una query por objeto
+# ✅ CORRECT - bulk operations
+# ❌ Slow: one query per object
 for user in users:
     user.active = True
     user.save()
 
-# ✅ Rápido: una sola query UPDATE
+# ✅ Fast: single UPDATE query
 User.objects.filter(id__in=[u.id for u in users]).update(active=True)
 ```
 
 ---
 
-## 8. Estructuras de Datos Eficientes
+## 8. Efficient Data Structures
 
 ```python
-# ❌ INEFICIENTE - Búsqueda O(n) en lista
+# ❌ INEFFICIENT - O(n) search in list
 if item in large_list:  # O(n)
     pass
 
-# ✅ CORRECTO - Búsqueda O(1) en set
+# ✅ CORRECT - O(1) search in set
 large_set = set(large_list)
 if item in large_set:  # O(1)
     pass
 
-# ❌ INEFICIENTE - Contar con list.count()
+# ❌ INEFFICIENT - Counting with list.count()
 counts = {item: large_list.count(item) for item in set(large_list)}  # O(n²)
 
-# ✅ CORRECTO - Counter O(n)
+# ✅ CORRECT - Counter O(n)
 from collections import Counter
 counts = Counter(large_list)  # O(n)
 
-# ✅ CORRECTO - deque para operaciones en extremos
+# ✅ CORRECT - deque for operations at ends
 from collections import deque
 
-# ❌ Lista: pop(0) es O(n)
+# ❌ List: pop(0) is O(n)
 queue = [1, 2, 3]
 queue.pop(0)
 
-# ✅ Deque: popleft() es O(1)
+# ✅ Deque: popleft() is O(1)
 queue = deque([1, 2, 3])
 queue.popleft()
 
-# ✅ CORRECTO - namedtuple para estructuras ligeras
+# ✅ CORRECT - namedtuple for lightweight structures
 from collections import namedtuple
 
-# Menor overhead que clase normal
+# Less overhead than normal class
 Point = namedtuple('Point', ['x', 'y'])
 p = Point(1, 2)
 ```
@@ -345,15 +345,15 @@ p = Point(1, 2)
 ## 9. String Concatenation
 
 ```python
-# ❌ INEFICIENTE - O(n²) por inmutabilidad de strings
+# ❌ INEFFICIENT - O(n²) due to string immutability
 result = ""
 for item in large_list:
-    result += str(item)  # Crea nuevo string cada vez
+    result += str(item)  # Creates new string each time
 
-# ✅ CORRECTO - join() O(n)
+# ✅ CORRECT - join() O(n)
 result = "".join(str(item) for item in large_list)
 
-# ✅ CORRECTO - io.StringIO para concatenación compleja
+# ✅ CORRECT - io.StringIO for complex concatenation
 import io
 
 output = io.StringIO()
@@ -362,56 +362,56 @@ for item in large_list:
     output.write("\n")
 result = output.getvalue()
 
-# ✅ CORRECTO - f-strings son más rápidas que % o format
-# Más lento
+# ✅ CORRECT - f-strings are faster than % or format
+# Slower
 "Hello %s, you have %d messages" % (name, count)
 "Hello {}, you have {} messages".format(name, count)
 
-# Más rápido
+# Faster
 f"Hello {name}, you have {count} messages"
 ```
 
 ---
 
-## Checklist Python Específico
+## Python Specific Checklist
 
-### Concurrencia
-- [ ] Multiprocessing para CPU-bound (GIL)
-- [ ] ThreadPoolExecutor para I/O-bound
-- [ ] Asyncio para alto throughput de I/O
-- [ ] NUNCA usar threads para cálculos intensivos
+### Concurrency
+- [ ] Multiprocessing for CPU-bound (GIL)
+- [ ] ThreadPoolExecutor for I/O-bound
+- [ ] Asyncio for high I/O throughput
+- [ ] NEVER use threads for intensive calculations
 
-### Memoria
-- [ ] Generadores para grandes volúmenes de datos
-- [ ] `__slots__` para clases con muchas instancias
-- [ ] Weak references para cachés grandes
-- [ ] Streaming en lugar de cargar todo en RAM
+### Memory
+- [ ] Generators for large data volumes
+- [ ] `__slots__` for classes with many instances
+- [ ] Weak references for large caches
+- [ ] Streaming instead of loading everything in RAM
 
-### Algoritmos
-- [ ] Set/Map para búsquedas frecuentes O(1)
-- [ ] Deque para colas (popleft O(1))
-- [ ] Counter para conteo de frecuencias
-- [ ] Sort con key en lugar de cmp
+### Algorithms
+- [ ] Set/Map for frequent lookups O(1)
+- [ ] Deque for queues (popleft O(1))
+- [ ] Counter for frequency counting
+- [ ] Sort with key instead of cmp
 
-### Base de Datos
-- [ ] select_related para ForeignKey (1 query)
-- [ ] prefetch_related para ManyToMany (2 queries)
-- [ ] Bulk operations en lugar de loops
-- [ ] Índices en columnas de búsqueda frecuente
+### Database
+- [ ] select_related for ForeignKey (1 query)
+- [ ] prefetch_related for ManyToMany (2 queries)
+- [ ] Bulk operations instead of loops
+- [ ] Indexes on frequently searched columns
 
 ### Caching
-- [ ] @lru_cache para funciones puras
-- [ ] Cachear resultados de queries frecuentes
-- [ ] Invalidación apropiada del caché
+- [ ] @lru_cache for pure functions
+- [ ] Cache frequent query results
+- [ ] Appropriate cache invalidation
 
 ### Profiling
-- [ ] cProfile para identificar cuellos de botella
-- [ ] timeit para comparar implementaciones
-- [ ] memory_profiler para uso de memoria
+- [ ] cProfile to identify bottlenecks
+- [ ] timeit to compare implementations
+- [ ] memory_profiler for memory usage
 
 ---
 
-## Referencias
+## References
 
 - [Python Performance Tips](https://wiki.python.org/moin/PythonSpeed/PerformanceTips)
 - [High Performance Python](https://www.oreilly.com/library/view/high-performance-python/9781449361539/)

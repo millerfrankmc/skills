@@ -1,68 +1,68 @@
-# Casos Reales de Seguridad Eliminada por Error
+# Real Cases of Security Accidentally Removed
 
-> Este archivo documenta casos específicos donde la skill KISS-DRY-YAGNI eliminó código de seguridad por error. Úsalo como referencia para entender qué protecciones son fáciles de confundir con "código por si acaso".
+> This file documents specific cases where the KISS-DRY-YAGNI skill removed security code by mistake. Use it as a reference to understand which protections are easy to confuse with "just in case" code.
 
 ---
 
-## Índice de Protecciones
+## Protection Index
 
-### 📚 Documentación por Lenguaje
+### 📚 Documentation by Language
 
-| Lenguaje | Seguridad | Rendimiento |
-|----------|-----------|-------------|
+| Language | Security | Performance |
+|----------|----------|-------------|
 | **Python** | [python-security.md](./python-security.md) | [python-performance.md](../performance/python-performance.md) |
 | **TypeScript** | [typescript-security.md](./typescript-security.md) | [typescript-performance.md](../performance/typescript-performance.md) |
 | **Go** | [go-security.md](./go-security.md) | [go-performance.md](../performance/go-performance.md) |
 | **Kotlin** | [kotlin-security.md](./kotlin-security.md) | [kotlin-performance.md](../performance/kotlin-performance.md) |
 | **Rust** | [rust-security.md](./rust-security.md) | [rust-performance.md](../performance/rust-performance.md) |
 
-### 🔒 Casos Documentados en Este Archivo
+### 🔒 Cases Documented in This File
 
-| Caso | Categoría | Descripción |
-|------|-----------|-------------|
-| [Caso 1: Shutdown Graceful](#caso-1-shutdown-graceful) | Protección de Procesos | Manejo de SIGTERM para cierre ordenado |
-| [Caso 2: Usuario No-Root en Docker](#caso-2-usuario-no-root-en-docker) | Protección de Infraestructura | Seguridad en contenedores |
-| [Caso 3: Circuit Breaker](#caso-3-circuit-breaker-eliminado) | Resiliencia | Prevención de cascada de fallos |
-| [Caso 4: Rate Limiting](#caso-4-rate-limiting-eliminado) | Protección contra Abuso | Prevención de fuerza bruta |
-| [Caso 5: Validación Múltiple](#caso-5-validación-múltiple-eliminada) | Defensa en Profundidad | Validación de uploads |
-| [Caso 6: Resource Limits](#caso-6-resource-limits-eliminados) | Protección de Infraestructura | Límites en Kubernetes |
+| Case | Category | Description |
+|------|----------|-------------|
+| [Case 1: Graceful Shutdown](#case-1-graceful-shutdown) | Process Protection | SIGTERM handling for orderly shutdown |
+| [Case 2: Non-Root User in Docker](#case-2-non-root-user-in-docker) | Infrastructure Protection | Security in containers |
+| [Case 3: Circuit Breaker](#case-3-circuit-breaker-removed) | Resilience | Prevention of cascading failures |
+| [Case 4: Rate Limiting](#case-4-rate-limiting-removed) | Abuse Protection | Brute force prevention |
+| [Case 5: Multiple Validation](#case-5-multiple-validation-removed) | Defense in Depth | Upload validation |
+| [Case 6: Resource Limits](#case-6-resource-limits-removed) | Infrastructure Protection | Limits in Kubernetes |
 
-### ⚡ Optimizaciones de Rendimiento por Lenguaje
+### ⚡ Performance Optimizations by Language
 
-Consulta los archivos de performance específicos para cada lenguaje:
+Consult the specific performance files for each language:
 
-- **Python**: GIL y threading vs multiprocessing, generadores vs listas, asyncio, N+1 queries
-- **TypeScript**: Event loop y async/await, Promise.all vs loops seriales, Worker threads
-- **Go**: Goroutines y channels, sync.Pool, strings.Builder, pre-allocación de slices
+- **Python**: GIL and threading vs multiprocessing, generators vs lists, asyncio, N+1 queries
+- **TypeScript**: Event loop and async/await, Promise.all vs serial loops, Worker threads
+- **Go**: Goroutines and channels, sync.Pool, strings.Builder, slice pre-allocation
 - **Kotlin**: Coroutines vs threads, lazy initialization, inline functions, Flow
-- **Rust**: Zero-cost abstractions, iterators, SIMD, async/await con Tokio
+- **Rust**: Zero-cost abstractions, iterators, SIMD, async/await with Tokio
 
 ---
 
 ---
 
-## Caso 1: Shutdown Graceful
+## Case 1: Graceful Shutdown
 
-**Fecha:** 2026-03-13
-**Contexto:** Servicio Node.js con manejo de señales
-**Archivo:** `src/server.ts`
+**Date:** 2026-03-13
+**Context:** Node.js service with signal handling
+**File:** `src/server.ts`
 
-### Código Eliminado
+### Code Removed
 
 ```javascript
 process.on('SIGTERM', async () => {
   logger.info('Received SIGTERM, starting graceful shutdown...');
 
-  // Dejar de aceptar nuevas conexiones
+  // Stop accepting new connections
   server.close(async () => {
     logger.info('HTTP server closed');
 
     try {
-      // Cerrar conexiones a base de datos
+      // Close database connections
       await db.close();
       logger.info('Database connections closed');
 
-      // Cerrar conexiones a cache
+      // Close cache connections
       await redis.disconnect();
       logger.info('Cache connections closed');
 
@@ -76,143 +76,143 @@ process.on('SIGTERM', async () => {
 });
 ```
 
-### Razón Incorrecta de Eliminación
-> "Este código es 'por si acaso'. El sistema operativo ya maneja la terminación de procesos automáticamente. Además, el código es demasiado largo (20+ líneas) para una función que solo cierra conexiones."
+### Incorrect Removal Reason
+> "This code is 'just in case'. The operating system already handles process termination automatically. Also, the code is too long (20+ lines) for a function that just closes connections."
 
-### Impacto Real
+### Real Impact
 
-1. **Corrupción de datos:** Requests en curso fueron interrumpidos a mitad de procesamiento
-2. **Conexiones colgadas:** Conexiones a base de datos quedaron en estado `IDLE IN TRANSACTION`
-3. **Pérdida de transacciones:** 3 transacciones financieras quedaron en estado inconsistente
-4. **Reconexión lenta:** El siguiente despliegue tardó 5 minutos extra limpiando conexiones fantasmas
+1. **Data corruption:** Requests in progress were interrupted mid-processing
+2. **Hung connections:** Database connections were left in `IDLE IN TRANSACTION` state
+3. **Transaction loss:** 3 financial transactions were left in inconsistent state
+4. **Slow reconnection:** The next deployment took 5 extra minutes cleaning up ghost connections
 
-### Por Qué Es Seguridad (No YAGNI)
+### Why It's Security (Not YAGNI)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Sin graceful shutdown          Con graceful shutdown       │
+│  Without graceful shutdown      With graceful shutdown      │
 ├─────────────────────────────────────────────────────────────┤
-│  1. SIGTERM recibido            1. SIGTERM recibido         │
-│  2. Proceso muere INMEDIATO     2. Señal capturada          │
-│  3. Requests abortados          3. Dejar de aceptar nuevas  │
-│  4. DB en estado inconsistente  4. Esperar requests activas │
-│  5. Datos corruptos             5. Cerrar conexiones        │
-│                                 6. Salir limpiamente        │
+│  1. SIGTERM received            1. SIGTERM received         │
+│  2. Process dies IMMEDIATELY    2. Signal captured          │
+│  3. Requests aborted            3. Stop accepting new       │
+│  4. DB in inconsistent state    4. Wait for active requests │
+│  5. Corrupt data                5. Close connections        │
+│                                 6. Exit cleanly             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Clasificación
+### Classification
 
-- **Categoría:** Protección de Procesos
-- **Subcategoría:** Shutdown Graceful
-- **Palabras clave:** `SIGTERM`, `SIGINT`, `process.on`, `server.close()`, `cleanup`
+- **Category:** Process Protection
+- **Subcategory:** Graceful Shutdown
+- **Keywords:** `SIGTERM`, `SIGINT`, `process.on`, `server.close()`, `cleanup`
 
 ---
 
-## Caso 2: Usuario No-Root en Docker
+## Case 2: Non-Root User in Docker
 
-**Fecha:** 2026-03-13
-**Contexto:** Dockerfile de aplicación Python/Flask
-**Archivo:** `Dockerfile`
+**Date:** 2026-03-13
+**Context:** Dockerfile for Python/Flask application
+**File:** `Dockerfile`
 
-### Código Eliminado
+### Code Removed
 
 ```dockerfile
 FROM python:3.11-slim
 
-# Instalar dependencias del sistema
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Crear usuario no-root para ejecutar la aplicación
+# Create non-root user to run the application
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
-# Crear directorio de trabajo
+# Create working directory
 WORKDIR /app
 
-# Copiar requirements primero (para caché de capas)
+# Copy requirements first (for layer cache)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código de la aplicación
+# Copy application code
 COPY . .
 
-# Cambiar propietario del código al usuario no-root
+# Change owner of code to non-root user
 RUN chown -R appuser:appgroup /app
 
-# Cambiar al usuario no-root
+# Switch to non-root user
 USER appuser
 
-# Exponer puerto
+# Expose port
 EXPOSE 5000
 
-# Comando de inicio
+# Start command
 CMD ["python", "app.py"]
 ```
 
-### Razón Incorrecta de Eliminación
-> "La creación de usuario es complicación innecesaria. Los contenedores Docker ya están aislados del host. Según YAGNI, si no hay evidencia de que alguien escape de contenedores, no necesitamos esta protección. Además, el contenedor necesita root para instalar dependencias."
+### Incorrect Removal Reason
+> "Creating a user is unnecessary complication. Docker containers are already isolated from the host. According to YAGNI, if there's no evidence that someone escapes containers, we don't need this protection. Also, the container needs root to install dependencies."
 
-### Impacto Real
+### Real Impact
 
-1. **Privilege escalation:** Si se explota una vulnerabilidad en la app (ej: RCE via deserialización), el atacante tiene **root dentro del contenedor**
-2. **Escape de contenedor:** Con root + vulnerabilidad de kernel (muy común), el atacante obtiene **root en el host**
-3. **Ataque a infraestructura:** El atacante puede:
-   - Acceder a otros contenedores
-   - Montar volúmenes del host
-   - Modificar configuraciones del sistema
-   - Instalar backdoors persistentes
+1. **Privilege escalation:** If a vulnerability in the app is exploited (e.g., RCE via deserialization), the attacker has **root inside the container**
+2. **Container escape:** With root + kernel vulnerability (very common), the attacker gets **root on the host**
+3. **Infrastructure attack:** The attacker can:
+   - Access other containers
+   - Mount host volumes
+   - Modify system configurations
+   - Install persistent backdoors
 
-### Demostración del Riesgo
+### Risk Demonstration
 
 ```bash
-# Sin USER directive (corriendo como root)
+# Without USER directive (running as root)
 $ docker exec vulnerable_app whoami
 root
 
-# Con una vulnerabilidad RCE, el atacante puede:
+# With an RCE vulnerability, the attacker can:
 root@container:~# mount /dev/sda1 /mnt/host
 root@container:~# cat /mnt/host/etc/shadow
 root@container:~# echo "backdoor" >> /mnt/host/root/.bashrc
 ```
 
-### Por Qué Es Seguridad (No YAGNI)
+### Why It's Security (Not YAGNI)
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │           Defense in Depth                                     │
 ├────────────────────────────────────────────────────────────────┤
 │                                                                │
-│   Capa 1: Aislamiento de contenedor (no garantizado)          │
+│   Layer 1: Container isolation (not guaranteed)               │
 │   ├─ Namespace isolation                                      │
 │   ├─ Cgroups                                                  │
 │   └─ Capabilities                                             │
 │                                                                │
-│   Capa 2: Usuario no-root (esta protección)                   │
-│   ├─ Si el atacante escapa, no tiene root en host            │
-│   └─ Limita el impacto de RCE dentro del contenedor          │
+│   Layer 2: Non-root user (this protection)                    │
+│   ├─ If attacker escapes, they don't have root on host       │
+│   └─ Limits impact of RCE inside the container               │
 │                                                                │
-│   Capa 3: Seccomp, AppArmor (protección adicional)            │
+│   Layer 3: Seccomp, AppArmor (additional protection)          │
 │                                                                │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-### Clasificación
+### Classification
 
-- **Categoría:** Protección de Infraestructura
-- **Subcategoría:** Contenedor Seguro
-- **Palabras clave:** `USER`, `useradd`, `adduser`, `runAsNonRoot`, `securityContext`
+- **Category:** Infrastructure Protection
+- **Subcategory:** Secure Container
+- **Keywords:** `USER`, `useradd`, `adduser`, `runAsNonRoot`, `securityContext`
 
 ---
 
-## Caso 3: Circuit Breaker Eliminado
+## Case 3: Circuit Breaker Removed
 
-**Fecha:** 2025-11-20
-**Contexto:** Microservicio de pagos con llamadas a API bancaria
-**Archivo:** `src/services/bankApi.ts`
+**Date:** 2025-11-20
+**Context:** Payment microservice with bank API calls
+**File:** `src/services/bankApi.ts`
 
-### Código Eliminado
+### Code Removed
 
 ```typescript
 class BankApiCircuitBreaker {
@@ -221,7 +221,7 @@ class BankApiCircuitBreaker {
   private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
 
   private readonly FAILURE_THRESHOLD = 5;
-  private readonly TIMEOUT = 60000; // 1 minuto
+  private readonly TIMEOUT = 60000; // 1 minute
 
   async execute<T>(operation: () => Promise<T>): Promise<T> {
     if (this.state === 'OPEN') {
@@ -259,21 +259,21 @@ class BankApiCircuitBreaker {
 }
 ```
 
-### Razón Incorrecta de Eliminación
-> "Este código es demasiado complejo (40+ líneas) para un simple contador de errores. El error handling normal es suficiente. Además, si la API bancaria falla, queremos saberlo inmediatamente, no 'abrir un circuito'."
+### Incorrect Removal Reason
+> "This code is too complex (40+ lines) for a simple error counter. Normal error handling is sufficient. Also, if the bank API fails, we want to know immediately, not 'open a circuit'."
 
-### Impacto Real
+### Real Impact
 
-1. **Cascada de fallos:** Cuando la API bancaria tuvo 30s de latencia, TODOS los servicios que dependían de ella también se degradaron
-2. **Timeout masivo:** Cada request esperó 30s antes de fallar, agotando el pool de conexiones
-3. **Denial of Service:** El servicio dejó de responder a nuevas requests por 15 minutos
-4. **Pérdida de revenue:** 200 transacciones de pago no procesadas
+1. **Cascading failures:** When the bank API had 30s latency, ALL services that depended on it also degraded
+2. **Massive timeout:** Each request waited 30s before failing, exhausting the connection pool
+3. **Denial of Service:** The service stopped responding to new requests for 15 minutes
+4. **Revenue loss:** 200 payment transactions not processed
 
-### Por Qué Es Seguridad/Resiliencia (No YAGNI)
+### Why It's Security/Resilience (Not YAGNI)
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  Sin Circuit Breaker            Con Circuit Breaker           │
+│  Without Circuit Breaker        With Circuit Breaker          │
 ├────────────────────────────────────────────────────────────────┤
 │                                                                │
 │  Request 1: timeout 30s         Request 1: timeout 30s        │
@@ -282,37 +282,37 @@ class BankApiCircuitBreaker {
 │  ...                            Request 4: timeout 30s        │
 │  Request 100: timeout 30s       Request 5: timeout 30s        │
 │                                 ────────────────────────      │
-│  Total: 3000s de espera         CIRCUIT BREAKER ABIERTO       │
-│  Pool de conexiones agotado     Request 6: Fallo INMEDIATO    │
-│  Servicio no disponible         (sin esperar)                 │
-│                                 Servicio sigue disponible     │
-│                                 para otras operaciones        │
+│  Total: 3000s of waiting        CIRCUIT BREAKER OPEN          │
+│  Connection pool exhausted      Request 6: IMMEDIATE failure  │
+│  Service unavailable            (no waiting)                  │
+│                                 Service remains available     │
+│                                 for other operations          │
 │                                                                │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-### Clasificación
+### Classification
 
-- **Categoría:** Resiliencia
-- **Subcategoría:** Circuit Breaker
-- **Palabras clave:** `CircuitBreaker`, `failureCount`, `threshold`, `OPEN`, `CLOSED`
+- **Category:** Resilience
+- **Subcategory:** Circuit Breaker
+- **Keywords:** `CircuitBreaker`, `failureCount`, `threshold`, `OPEN`, `CLOSED`
 
 ---
 
-## Caso 4: Rate Limiting Eliminado
+## Case 4: Rate Limiting Removed
 
-**Fecha:** 2025-09-15
-**Contexto:** Endpoint de login de aplicación web
-**Archivo:** `src/routes/auth.ts`
+**Date:** 2025-09-15
+**Context:** Web application login endpoint
+**File:** `src/routes/auth.ts`
 
-### Código Eliminado
+### Code Removed
 
 ```typescript
 import rateLimit from 'express-rate-limit';
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // máximo 5 intentos
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // maximum 5 attempts
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
@@ -324,93 +324,93 @@ const loginLimiter = rateLimit({
   }
 });
 
-// Aplicar solo al endpoint de login
+// Apply only to login endpoint
 app.post('/auth/login', loginLimiter, async (req, res) => {
-  // ... lógica de login
+  // ... login logic
 });
 ```
 
-### Razón Incorrecta de Eliminación
-> "El rate limiting debería hacerse a nivel de infraestructura (Nginx, CloudFlare), no en código. Esto viola YAGNI porque ya tenemos protección en el edge. Además, el código es complejo (14 líneas) para algo que el proxy debería manejar."
+### Incorrect Removal Reason
+> "Rate limiting should be done at the infrastructure level (Nginx, CloudFlare), not in code. This violates YAGNI because we already have protection at the edge. Also, the code is complex (14 lines) for something the proxy should handle."
 
-### Impacto Real
+### Real Impact
 
-1. **Ataque de fuerza bruta:** 100,000 intentos de login contra cuentas de administradores
-2. **Compromiso de cuentas:** 3 cuentas de admin fueron comprometidas usando passwords comunes
-3. **Acceso no autorizado:** El atacante accedió al panel de administración
-4. **Exfiltración de datos:** Datos de 10,000 usuarios fueron exportados
+1. **Brute force attack:** 100,000 login attempts against administrator accounts
+2. **Account compromise:** 3 admin accounts were compromised using common passwords
+3. **Unauthorized access:** The attacker accessed the admin panel
+4. **Data exfiltration:** Data from 10,000 users was exported
 
-### Por Qué Es Seguridad (No YAGNI)
+### Why It's Security (Not YAGNI)
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  Defense in Depth para Autenticación                           │
+│  Defense in Depth for Authentication                           │
 ├────────────────────────────────────────────────────────────────┤
 │                                                                │
-│  Capa 1: Edge (CloudFlare/Nginx)                              │
-│  ├─ Protección DDoS                                           │
-│  ├─ Rate limiting por IP                                      │
-│  └─ Puede ser bypassed con rotación de IPs                   │
+│  Layer 1: Edge (CloudFlare/Nginx)                             │
+│  ├─ DDoS protection                                           │
+│  ├─ Rate limiting by IP                                       │
+│  └─ Can be bypassed with IP rotation                         │
 │                                                                │
-│  Capa 2: Aplicación (este rate limiting)                      │
-│  ├─ Rate limiting por cuenta (no solo IP)                    │
-│  ├─ Protección contra credential stuffing                     │
-│  └─ Logging de intentos sospechosos                           │
+│  Layer 2: Application (this rate limiting)                    │
+│  ├─ Rate limiting by account (not just IP)                   │
+│  ├─ Protection against credential stuffing                    │
+│  └─ Logging of suspicious attempts                            │
 │                                                                │
-│  Capa 3: Base de datos                                        │
-│  ├─ Bloqueo de cuentas después de N intentos                  │
-│  └─ Notificación al usuario                                   │
+│  Layer 3: Database                                            │
+│  ├─ Account lockout after N attempts                          │
+│  └─ User notification                                         │
 │                                                                │
-│  Si eliminas Capa 2 → atacante puede atacar desde múltiples  │
-│  IPs sin ser detectado                                        │
+│  If you remove Layer 2 → attacker can attack from multiple   │
+│  IPs without being detected                                   │
 │                                                                │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-### Clasificación
+### Classification
 
-- **Categoría:** Protección contra Abuso
-- **Subcategoría:** Rate Limiting
-- **Palabras clave:** `rateLimit`, `max`, `windowMs`, `handler`
+- **Category:** Abuse Protection
+- **Subcategory:** Rate Limiting
+- **Keywords:** `rateLimit`, `max`, `windowMs`, `handler`
 
 ---
 
-## Caso 5: Validación Múltiple Eliminada
+## Case 5: Multiple Validation Removed
 
-**Fecha:** 2025-07-10
-**Contexto:** Upload de archivos en aplicación de documentos
-**Archivo:** `src/services/fileUpload.ts`
+**Date:** 2025-07-10
+**Context:** File upload in document application
+**File:** `src/services/fileUpload.ts`
 
-### Código Eliminado
+### Code Removed
 
 ```typescript
 async function validateAndProcessFile(file: UploadedFile) {
-  // Capa 1: Validar MIME type del header
+  // Layer 1: Validate MIME type from header
   const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png'];
   if (!allowedMimeTypes.includes(file.mimetype)) {
     throw new ValidationError('Invalid MIME type');
   }
 
-  // Capa 2: Validar extensión de archivo
+  // Layer 2: Validate file extension
   const ext = path.extname(file.originalname).toLowerCase();
   const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
   if (!allowedExtensions.includes(ext)) {
     throw new ValidationError('Invalid file extension');
   }
 
-  // Capa 3: Validar magic bytes (contenido real del archivo)
+  // Layer 3: Validate magic bytes (actual file content)
   const magicBytes = await readFirstBytes(file.path, 8);
   if (!isValidMagicBytes(magicBytes, file.mimetype)) {
     throw new ValidationError('File content does not match declared type');
   }
 
-  // Capa 4: Validar tamaño máximo
+  // Layer 4: Validate maximum size
   const MAX_SIZE = 10 * 1024 * 1024; // 10MB
   if (file.size > MAX_SIZE) {
     throw new ValidationError('File too large');
   }
 
-  // Capa 5: Scan con antivirus (ClamAV)
+  // Layer 5: Scan with antivirus (ClamAV)
   const scanResult = await clamav.scan(file.path);
   if (scanResult.isInfected) {
     throw new ValidationError('File contains malware');
@@ -420,59 +420,59 @@ async function validateAndProcessFile(file: UploadedFile) {
 }
 ```
 
-### Razón Incorrecta de Eliminación
-> "Esta función viola DRY - tiene 5 validaciones diferentes para el 'mismo' archivo. Deberíamos consolidar en una sola función `validateFile()`. Además, validar MIME type Y extensión Y magic bytes es redundante - si el MIME type es correcto, el archivo es válido."
+### Incorrect Removal Reason
+> "This function violates DRY - it has 5 different validations for the 'same' file. We should consolidate into a single `validateFile()` function. Also, validating MIME type AND extension AND magic bytes is redundant - if the MIME type is correct, the file is valid."
 
-### Impacto Real
+### Real Impact
 
-1. **Bypass de seguridad:** Un atacante subió un archivo `.exe` renombrado a `.pdf`
-2. **Ejecución de malware:** El archivo explotó una vulnerabilidad en el visor de PDF
-3. **Compromiso del servidor:** Se instaló un cryptominer
-4. **Lateral movement:** El atacante accedió a la red interna
+1. **Security bypass:** An attacker uploaded a `.exe` file renamed to `.pdf`
+2. **Malware execution:** The file exploited a vulnerability in the PDF viewer
+3. **Server compromise:** A cryptominer was installed
+4. **Lateral movement:** The attacker accessed the internal network
 
-### Por Qué Es Seguridad (No DRY)
+### Why It's Security (Not DRY)
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  Defensa en Profundidad - Cada capa protege contra diferente  │
-│  vector de ataque                                             │
+│  Defense in Depth - Each layer protects against different     │
+│  attack vector                                                │
 ├────────────────────────────────────────────────────────────────┤
 │                                                                │
-│  Capa 1: MIME type                                             │
-│  └─ Protege contra: Browser ejecutando archivo como script    │
+│  Layer 1: MIME type                                            │
+│  └─ Protects against: Browser executing file as script       │
 │                                                                │
-│  Capa 2: Extensión de archivo                                  │
-│  └─ Protege contra: Confusión de tipo en el sistema de archivos│
+│  Layer 2: File extension                                       │
+│  └─ Protects against: Type confusion in file system          │
 │                                                                │
-│  Capa 3: Magic bytes                                           │
-│  └─ Protege contra: MIME spoofing (header falso)               │
+│  Layer 3: Magic bytes                                          │
+│  └─ Protects against: MIME spoofing (false header)            │
 │                                                                │
-│  Capa 4: Tamaño                                                │
-│  └─ Protege contra: DoS por disco lleno                        │
+│  Layer 4: Size                                                 │
+│  └─ Protects against: DoS by disk full                        │
 │                                                                │
-│  Capa 5: Antivirus                                             │
-│  └─ Protege contra: Malware conocido                           │
+│  Layer 5: Antivirus                                            │
+│  └─ Protects against: Known malware                           │
 │                                                                │
-│  Si consolidas en una sola validación → bypass fácil           │
+│  If you consolidate into a single validation → easy bypass   │
 │                                                                │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-### Clasificación
+### Classification
 
-- **Categoría:** Defensa en Profundidad
-- **Subcategoría:** Validación Múltiple
-- **Palabras clave:** `mimetype`, `extension`, `magic bytes`, `validation`
+- **Category:** Defense in Depth
+- **Subcategory:** Multiple Validation
+- **Keywords:** `mimetype`, `extension`, `magic bytes`, `validation`
 
 ---
 
-## Caso 6: Resource Limits Eliminados
+## Case 6: Resource Limits Removed
 
-**Fecha:** 2025-05-22
-**Contexto:** Deployment en Kubernetes
-**Archivo:** `k8s/deployment.yaml`
+**Date:** 2025-05-22
+**Context:** Deployment in Kubernetes
+**File:** `k8s/deployment.yaml`
 
-### Código Eliminado
+### Code Removed
 
 ```yaml
 apiVersion: apps/v1
@@ -498,95 +498,95 @@ spec:
               value: "--max-old-space-size=450"
 ```
 
-### Razón Incorrecta de Eliminación
-> "Los resource limits son una optimización prematura. Kubernetes asignará recursos dinámicamente según sea necesario. Además, estos valores son arbitrarios (¿por qué 512Mi y no 1Gi?). Cuando necesitemos más recursos, los ajustaremos."
+### Incorrect Removal Reason
+> "Resource limits are premature optimization. Kubernetes will allocate resources dynamically as needed. Also, these values are arbitrary (why 512Mi and not 1Gi?). When we need more resources, we'll adjust them."
 
-### Impacto Real
+### Real Impact
 
-1. **Memory leak en producción:** Un bug causó que el consumo de memoria creciera indefinidamente
-2. **OOM Kill en cascada:** Sin límites, el pod consumió 8GB de RAM y fue killed
-3. **Node pressure:** El nodo completo quedó sin memoria
-4. **Evicción de pods:** Kubernetes empezó a matar otros pods para liberar memoria
-5. **Degradación total:** Toda la aplicación quedó inusable por 30 minutos
+1. **Memory leak in production:** A bug caused memory consumption to grow indefinitely
+2. **OOM Kill cascade:** Without limits, the pod consumed 8GB of RAM and was killed
+3. **Node pressure:** The entire node ran out of memory
+4. **Pod eviction:** Kubernetes started killing other pods to free memory
+5. **Total degradation:** The entire application was unusable for 30 minutes
 
-### Por Qué Es Seguridad/Estabilidad (No Optimización Prematura)
+### Why It's Security/Stability (Not Premature Optimization)
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  Sin Resource Limits            Con Resource Limits           │
+│  Without Resource Limits        With Resource Limits          │
 ├────────────────────────────────────────────────────────────────┤
 │                                                                │
-│  Memory leak ocurre             Memory leak ocurre            │
-│  ├─ Consumo crece sin límite    ├─ Alcanza límite (512Mi)     │
-│  ├─ Pod usa 8GB RAM             ├─ Pod es OOM Killed          │
-│  ├─ Nodo sin memoria            ├─ Kubernetes reinicia pod    │
-│  ├─ Otros pods eviccionados     ├─ Sistema sigue estable      │
-│  └─ Degradación total           └─ Un solo pod afectado       │
+│  Memory leak occurs             Memory leak occurs            │
+│  ├─ Consumption grows unbounded ├─ Reaches limit (512Mi)      │
+│  ├─ Pod uses 8GB RAM            ├─ Pod is OOM Killed          │
+│  ├─ Node out of memory          ├─ Kubernetes restarts pod    │
+│  ├─ Other pods evicted          ├─ System remains stable      │
+│  └─ Total degradation           └─ Single pod affected        │
 │                                                                │
-│  Límite = Fail fast + Contención de daños                     │
+│  Limit = Fail fast + Damage containment                       │
 │                                                                │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-### Clasificación
+### Classification
 
-- **Categoría:** Protección de Infraestructura
-- **Subcategoría:** Resource Limits
-- **Palabras clave:** `resources`, `limits`, `requests`, `memory`, `cpu`
-
----
-
-## Patrones Comunes de Error
-
-### Patrón 1: "El Sistema Ya Lo Maneja"
-> "El OS/Container/Kubernetes ya maneja eso"
-
-**Ejemplos:**
-- Shutdown graceful → "El OS mata el proceso"
-- Usuario no-root → "Docker ya aísla"
-- Rate limiting → "Nginx ya lo hace"
-
-**Realidad:** Defense in depth - cada capa es necesaria
-
-### Patrón 2: "Nunca Ha Fallado"
-> "Llevamos 2 años sin que esto sea un problema"
-
-**Ejemplos:**
-- Circuit breaker → "Nunca hemos tenido cascada de fallos"
-- Resource limits → "Nunca hemos tenido memory leaks"
-
-**Realidad:** La protección existe para cuando falle, no para cuando funciona
-
-### Patrón 3: "Es Complejidad Innecesaria"
-> "Esto viola KISS, debería ser más simple"
-
-**Ejemplos:**
-- Validación múltiple → "Consolidar en una función"
-- Rate limiting específico → "Hacerlo a nivel de infraestructura"
-
-**Realidad:** Algunas protecciones requieren complejidad inherente
-
-### Patrón 4: "Es Optimización Prematura"
-> "Esto es optimización, no necesitamos eso todavía"
-
-**Ejemplos:**
-- Resource limits → "Asignaremos recursos cuando sea necesario"
-- Connection pooling → "Crear conexiones bajo demanda es más simple"
-
-**Realidad:** Límites son protección, no optimización
+- **Category:** Infrastructure Protection
+- **Subcategory:** Resource Limits
+- **Keywords:** `resources`, `limits`, `requests`, `memory`, `cpu`
 
 ---
 
-## Referencias
+## Common Error Patterns
 
-### Seguridad por Lenguaje
+### Pattern 1: "The System Already Handles It"
+> "The OS/Container/Kubernetes already handles that"
+
+**Examples:**
+- Graceful shutdown → "The OS kills the process"
+- Non-root user → "Docker already isolates"
+- Rate limiting → "Nginx already does it"
+
+**Reality:** Defense in depth - each layer is necessary
+
+### Pattern 2: "It Has Never Failed"
+> "We've been running for 2 years without this being a problem"
+
+**Examples:**
+- Circuit breaker → "We've never had cascading failures"
+- Resource limits → "We've never had memory leaks"
+
+**Reality:** Protection exists for when it fails, not when it works
+
+### Pattern 3: "It's Unnecessary Complexity"
+> "This violates KISS, it should be simpler"
+
+**Examples:**
+- Multiple validation → "Consolidate into one function"
+- Specific rate limiting → "Do it at infrastructure level"
+
+**Reality:** Some protections require inherent complexity
+
+### Pattern 4: "It's Premature Optimization"
+> "This is optimization, we don't need that yet"
+
+**Examples:**
+- Resource limits → "We'll allocate resources when needed"
+- Connection pooling → "Creating connections on demand is simpler"
+
+**Reality:** Limits are protection, not optimization
+
+---
+
+## References
+
+### Security by Language
 - [Python Security](./python-security.md) - Pickle, eval, Django/Flask
 - [TypeScript Security](./typescript-security.md) - eval, SQLi, Express
 - [Go Security](./go-security.md) - Goroutines, SQL, FFI
 - [Kotlin Security](./kotlin-security.md) - Null safety, Spring
 - [Rust Security](./rust-security.md) - Unsafe, FFI, Ownership
 
-### Rendimiento por Lenguaje
+### Performance by Language
 - [Python Performance](../performance/python-performance.md) - GIL, asyncio, N+1
 - [TypeScript Performance](../performance/typescript-performance.md) - Event loop, Workers
 - [Go Performance](../performance/go-performance.md) - Goroutines, sync.Pool

@@ -1,30 +1,30 @@
-# Seguridad Específica - TypeScript/JavaScript
+# Language-Specific Security - TypeScript/JavaScript
 
-> Guía de protecciones de seguridad para código TypeScript/JavaScript (Node.js/Browser). NUNCA eliminar estos patrones al aplicar KISS-DRY-YAGNI.
+> Security protection guide for TypeScript/JavaScript code (Node.js/Browser). NEVER remove these patterns when applying KISS-DRY-YAGNI.
 
 ---
 
-## 1. Eval y Ejecución Dinámica
+## 1. Eval and Dynamic Execution
 
-### El Problema
+### The Problem
 ```typescript
-// ❌ PROHIBIDO - NUNCA con input del usuario
+// ❌ FORBIDDEN - NEVER with user input
 const userInput = req.body.code;
-eval(userInput); // RCE total
+eval(userInput); // Total RCE
 
-// ❌ PROHIBIDO - Function constructor
+// ❌ FORBIDDEN - Function constructor
 const fn = new Function('return ' + userInput)();
 
-// ❌ PROHIBIDO - setTimeout/setInterval con strings
+// ❌ FORBIDDEN - setTimeout/setInterval with strings
 setTimeout(userInput, 1000);
 ```
 
-### La Solución
+### The Solution
 ```typescript
-// ✅ CORRECTO - JSON.parse para datos estructurados
+// ✅ CORRECT - JSON.parse for structured data
 const data = JSON.parse(userInput);
 
-// ✅ CORRECTO - jsep o similar para expresiones matemáticas simples
+// ✅ CORRECT - jsep or similar for simple math expressions
 import * as jsep from 'jsep';
 
 function evaluateMath(expression: string): number {
@@ -34,11 +34,11 @@ function evaluateMath(expression: string): number {
     }
 
     const ast = jsep(expression);
-    // Evaluar AST de forma controlada
+    // Evaluate AST in controlled way
     return evaluateNode(ast);
 }
 
-// ✅ CORRECTO - VM2 o isolated-vm para sandboxing (si es inevitable)
+// ✅ CORRECT - VM2 or isolated-vm for sandboxing (if inevitable)
 import { VM } from 'vm2';
 
 const vm = new VM({
@@ -46,7 +46,7 @@ const vm = new VM({
     sandbox: { /* only expose safe objects */ }
 });
 
-const result = vm.run('1 + 1'); // Más seguro que eval
+const result = vm.run('1 + 1'); // Safer than eval
 ```
 
 ---
@@ -54,7 +54,7 @@ const result = vm.run('1 + 1'); // Más seguro que eval
 ## 2. Prototype Pollution
 
 ```typescript
-// ❌ PROHIBIDO - Merge recursivo sin validación
+// ❌ FORBIDDEN - Recursive merge without validation
 function merge(target: any, source: any) {
     for (const key in source) {
         if (typeof source[key] === 'object') {
@@ -65,12 +65,12 @@ function merge(target: any, source: any) {
     }
 }
 
-// Ataque: merge({}, JSON.parse('{"__proto__": {"isAdmin": true}}'))
+// Attack: merge({}, JSON.parse('{"__proto__": {"isAdmin": true}}'))
 
-// ✅ CORRECTO - Usar Object.assign o structuredClone
+// ✅ CORRECT - Use Object.assign or structuredClone
 const merged = Object.assign({}, target, source);
 
-// ✅ CORRECTO - Validar keys prohibidas
+// ✅ CORRECT - Validate forbidden keys
 const FORBIDDEN_KEYS = ['__proto__', 'constructor', 'prototype'];
 
 function safeMerge(target: any, source: any): any {
@@ -88,7 +88,7 @@ function safeMerge(target: any, source: any): any {
     return target;
 }
 
-// ✅ CORRECTO - Usar librerías seguras como lodash con fp
+// ✅ CORRECT - Use safe libraries like lodash with fp
 import { merge } from 'lodash/fp';
 const merged = merge(target, source); // Safe
 ```
@@ -98,27 +98,27 @@ const merged = merge(target, source); // Safe
 ## 3. SQL Injection
 
 ```typescript
-// ❌ PROHIBIDO - Template literals con variables
+// ❌ FORBIDDEN - Template literals with variables
 const query = `SELECT * FROM users WHERE id = ${userId}`;
 
-// ❌ PROHIBIDO - Concatenación de strings
+// ❌ FORBIDDEN - String concatenation
 const query = "SELECT * FROM users WHERE id = '" + userId + "'";
 
-// ✅ CORRECTO - mysql2 con placeholders
+// ✅ CORRECT - mysql2 with placeholders
 import mysql from 'mysql2/promise';
 const [rows] = await connection.execute(
     'SELECT * FROM users WHERE id = ? AND active = ?',
     [userId, true]
 );
 
-// ✅ CORRECTO - pg (PostgreSQL) con parametrización
+// ✅ CORRECT - pg (PostgreSQL) with parameterization
 import { Pool } from 'pg';
 const result = await pool.query(
     'SELECT * FROM users WHERE id = $1',
     [userId]
 );
 
-// ✅ CORRECTO - Prisma ORM
+// ✅ CORRECT - Prisma ORM
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
@@ -126,12 +126,12 @@ const user = await prisma.user.findUnique({
     where: { id: userId }
 });
 
-// ✅ CORRECTO - TypeORM
+// ✅ CORRECT - TypeORM
 import { Repository } from 'typeorm';
 const userRepo: Repository<User> = dataSource.getRepository(User);
 const user = await userRepo.findOneBy({ id: userId });
 
-// ✅ CORRECTO - Knex.js query builder
+// ✅ CORRECT - Knex.js query builder
 import knex from 'knex';
 const users = await knex('users')
     .where({ id: userId, active: true })
@@ -143,26 +143,26 @@ const users = await knex('users')
 ## 4. Path Traversal
 
 ```typescript
-// ❌ PROHIBIDO - Path sin sanitización
+// ❌ FORBIDDEN - Path without sanitization
 const filePath = path.join('./uploads', req.query.filename);
-fs.readFileSync(filePath); // Ataque: ../../../etc/passwd
+fs.readFileSync(filePath); // Attack: ../../../etc/passwd
 
-// ✅ CORRECTO - Validar path resuelto
+// ✅ CORRECT - Validate resolved path
 import path from 'path';
 import { promises as fs } from 'fs';
 
 const UPLOAD_DIR = path.resolve('./uploads');
 
 async function readUserFile(filename: string): Promise<Buffer> {
-    // Normalizar y resolver path
+    // Normalize and resolve path
     const filePath = path.resolve(UPLOAD_DIR, filename);
 
-    // Verificar que está dentro del directorio permitido
+    // Verify it's within the allowed directory
     if (!filePath.startsWith(UPLOAD_DIR)) {
         throw new Error('Path traversal detected');
     }
 
-    // Verificar que no contiene caracteres especiales
+    // Verify it doesn't contain special characters
     const basename = path.basename(filename);
     if (!/^[a-zA-Z0-9._-]+$/.test(basename)) {
         throw new Error('Invalid filename');
@@ -171,7 +171,7 @@ async function readUserFile(filename: string): Promise<Buffer> {
     return fs.readFile(filePath);
 }
 
-// ✅ CORRECTO - UUID como nombre de archivo
+// ✅ CORRECT - UUID as filename
 import { v4 as uuidv4 } from 'uuid';
 
 async function saveUpload(data: Buffer, originalName: string): Promise<string> {
@@ -192,16 +192,16 @@ async function saveUpload(data: Buffer, originalName: string): Promise<string> {
 
 ---
 
-## 5. Deserialización Segura
+## 5. Safe Deserialization
 
 ```typescript
-// ❌ PROHIBIDO - eval para "JSON" (¡sí, existe!)
+// ❌ FORBIDDEN - eval for "JSON" (yes, it exists!)
 const data = eval('(' + userInput + ')');
 
-// ✅ CORRECTO - JSON.parse
+// ✅ CORRECT - JSON.parse
 const data = JSON.parse(userInput);
 
-// ✅ CORRECTO - Validación con Zod
+// ✅ CORRECT - Validation with Zod
 import { z } from 'zod';
 
 const UserSchema = z.object({
@@ -217,7 +217,7 @@ function parseUser(data: unknown): User {
     return UserSchema.parse(data);
 }
 
-// ✅ CORRECTO - class-validator (TypeORM/NestJS)
+// ✅ CORRECT - class-validator (TypeORM/NestJS)
 import { IsEmail, IsInt, IsString, Length, Min, Max } from 'class-validator';
 
 class CreateUserDto {
@@ -234,7 +234,7 @@ class CreateUserDto {
     age: number;
 }
 
-// ✅ CORRECTO - joi
+// ✅ CORRECT - joi
 import Joi from 'joi';
 
 const schema = Joi.object({
@@ -249,16 +249,16 @@ const schema = Joi.object({
 ## 6. Secrets Management
 
 ```typescript
-// ❌ PROHIBIDO - Hardcodear secrets
+// ❌ FORBIDDEN - Hardcoding secrets
 const API_KEY = 'sk_live_1234567890abcdef';
 
-// ✅ CORRECTO - Variables de entorno
+// ✅ CORRECT - Environment variables
 const API_KEY = process.env.API_KEY;
 if (!API_KEY) {
     throw new Error('API_KEY environment variable is required');
 }
 
-// ✅ CORRECTO - dotenv para desarrollo
+// ✅ CORRECT - dotenv for development
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -268,7 +268,7 @@ const config = {
     apiKey: process.env.API_KEY!,
 };
 
-// Validar en startup
+// Validate at startup
 function validateConfig() {
     const required = ['DATABASE_URL', 'JWT_SECRET', 'API_KEY'];
     for (const key of required) {
@@ -278,7 +278,7 @@ function validateConfig() {
     }
 }
 
-// ✅ CORRECTO - AWS Secrets Manager / Azure Key Vault
+// ✅ CORRECT - AWS Secrets Manager / Azure Key Vault
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 
 async function getSecret(secretName: string): Promise<string> {
@@ -291,13 +291,13 @@ async function getSecret(secretName: string): Promise<string> {
 
 ---
 
-## 7. Logging Seguro
+## 7. Secure Logging
 
 ```typescript
-// ❌ PROHIBIDO - Loggear datos sensibles
+// ❌ FORBIDDEN - Logging sensitive data
 logger.info('User login', { email, password, creditCard });
 
-// ✅ CORRECTO - Sanitizar antes de loggear
+// ✅ CORRECT - Sanitize before logging
 import winston from 'winston';
 
 const SENSITIVE_FIELDS = [
@@ -324,7 +324,7 @@ function sanitizeForLogging(obj: any): any {
 
 logger.info('User login', sanitizeForLogging({ email, password }));
 
-// ✅ CORRECTO - Winston con redaction
+// ✅ CORRECT - Winston with redaction
 const logger = winston.createLogger({
     format: winston.format.combine(
         winston.format((info) => {
@@ -338,7 +338,7 @@ const logger = winston.createLogger({
 
 ---
 
-## 8. Express.js Seguro
+## 8. Secure Express.js
 
 ```typescript
 import express from 'express';
@@ -350,7 +350,7 @@ import hpp from 'hpp';
 
 const app = express();
 
-// ✅ CORRECTO - Helmet para headers de seguridad
+// ✅ CORRECT - Helmet for security headers
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -367,7 +367,7 @@ app.use(helmet({
     }
 }));
 
-// ✅ CORRECTO - CORS restrictivo (NO '*')
+// ✅ CORRECT - Restrictive CORS (NOT '*')
 app.use(cors({
     origin: ['https://app.example.com', 'https://admin.example.com'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -376,32 +376,32 @@ app.use(cors({
     maxAge: 86400
 }));
 
-// ✅ CORRECTO - Rate limiting
+// ✅ CORRECT - Rate limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // limitar cada IP a 100 requests por ventana
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per window
     message: 'Too many requests from this IP',
     standardHeaders: true,
     legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
-// Rate limiting más estricto para auth
+// Stricter rate limiting for auth
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
-    skipSuccessfulRequests: true, // No contar logins exitosos
+    skipSuccessfulRequests: true, // Don't count successful logins
 });
 app.use('/api/auth/login', authLimiter);
 
-// ✅ CORRECTO - Body parsing con límites
+// ✅ CORRECT - Body parsing with limits
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// ✅ CORRECTO - Sanitización NoSQL injection
+// ✅ CORRECT - NoSQL injection sanitization
 app.use(mongoSanitize());
 
-// ✅ CORRECTO - Prevención Parameter Pollution
+// ✅ CORRECT - Parameter Pollution Prevention
 app.use(hpp());
 ```
 
@@ -410,7 +410,7 @@ app.use(hpp());
 ## 9. Password Hashing
 
 ```typescript
-// ✅ CORRECTO - bcrypt
+// ✅ CORRECT - bcrypt
 import bcrypt from 'bcrypt';
 
 const SALT_ROUNDS = 12;
@@ -423,7 +423,7 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
     return bcrypt.compare(password, hash);
 }
 
-// ✅ CORRECTO - argon2 (más moderno)
+// ✅ CORRECT - argon2 (more modern)
 import argon2 from 'argon2';
 
 async function hashPasswordArgon(password: string): Promise<string> {
@@ -439,7 +439,7 @@ async function verifyPasswordArgon(password: string, hash: string): Promise<bool
     return argon2.verify(hash, password);
 }
 
-// ✅ CORRECTO - PBKDF2 para derivación de claves
+// ✅ CORRECT - PBKDF2 for key derivation
 import crypto from 'crypto';
 
 function deriveKey(password: string, salt: Buffer): Buffer {
@@ -449,7 +449,7 @@ function deriveKey(password: string, salt: Buffer): Buffer {
 
 ---
 
-## 10. JWT Seguro
+## 10. Secure JWT
 
 ```typescript
 import jwt from 'jsonwebtoken';
@@ -464,7 +464,7 @@ interface TokenPayload {
     type: 'access' | 'refresh';
 }
 
-// ✅ CORRECTO - Crear token con claims explícitas
+// ✅ CORRECT - Create token with explicit claims
 export function createToken(payload: Omit<TokenPayload, 'type'>): string {
     return jwt.sign(
         {
@@ -476,18 +476,18 @@ export function createToken(payload: Omit<TokenPayload, 'type'>): string {
         JWT_SECRET,
         {
             expiresIn: JWT_EXPIRES_IN,
-            algorithm: 'HS256', // Especificar algoritmo
+            algorithm: 'HS256', // Specify algorithm
             issuer: 'myapp',
             audience: 'myapp-client'
         }
     );
 }
 
-// ✅ CORRECTO - Verificar token estrictamente
+// ✅ CORRECT - Verify token strictly
 export function verifyToken(token: string): TokenPayload {
     try {
         const decoded = jwt.verify(token, JWT_SECRET, {
-            algorithms: ['HS256'], // Solo aceptar HS256
+            algorithms: ['HS256'], // Only accept HS256
             issuer: 'myapp',
             audience: 'myapp-client',
             complete: false
@@ -509,7 +509,7 @@ export function verifyToken(token: string): TokenPayload {
     }
 }
 
-// ✅ CORRECTO - Middleware de autenticación
+// ✅ CORRECT - Authentication middleware
 export function authenticateToken(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -530,7 +530,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
 
 ---
 
-## 11. Validación de Uploads
+## 11. Upload Validation
 
 ```typescript
 import multer from 'multer';
@@ -539,8 +539,8 @@ import { v4 as uuidv4 } from 'uuid';
 import fileType from 'file-type';
 import fs from 'fs/promises';
 
-// ✅ CORRECTO - Configuración segura de multer
-const storage = multer.memoryStorage(); // No guardar en disco inmediatamente
+// ✅ CORRECT - Secure multer configuration
+const storage = multer.memoryStorage(); // Don't save to disk immediately
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
     const allowedMimes = ['image/jpeg', 'image/png', 'application/pdf'];
@@ -560,14 +560,14 @@ const upload = multer({
     fileFilter
 });
 
-// ✅ CORRECTO - Validación de magic bytes
+// ✅ CORRECT - Magic bytes validation
 async function validateFile(file: Express.Multer.File): Promise<void> {
-    // Validar tamaño
+    // Validate size
     if (file.size > 10 * 1024 * 1024) {
         throw new Error('File too large');
     }
 
-    // Detectar tipo real por magic bytes
+    // Detect real type by magic bytes
     const type = await fileType.fromBuffer(file.buffer);
     if (!type) {
         throw new Error('Could not determine file type');
@@ -578,13 +578,13 @@ async function validateFile(file: Express.Multer.File): Promise<void> {
         throw new Error('File type not allowed');
     }
 
-    // Verificar que MIME declarado coincide con real
+    // Verify declared MIME matches real
     if (file.mimetype !== type.mime) {
         throw new Error('MIME type mismatch');
     }
 }
 
-// ✅ CORRECTO - Guardar con nombre aleatorio
+// ✅ CORRECT - Save with random name
 async function saveFile(file: Express.Multer.File): Promise<string> {
     const ext = path.extname(file.originalname).toLowerCase();
     const filename = `${uuidv4()}${ext}`;
@@ -600,14 +600,14 @@ async function saveFile(file: Express.Multer.File): Promise<string> {
 ## 12. XSS Prevention
 
 ```typescript
-// ❌ PROHIBIDO - InnerHTML con input del usuario
+// ❌ FORBIDDEN - InnerHTML with user input
 element.innerHTML = userInput;
 
-// ✅ CORRECTO - textContent
+// ✅ CORRECT - textContent
 const element = document.createElement('div');
 element.textContent = userInput;
 
-// ✅ CORRECTO - DOMPurify para HTML
+// ✅ CORRECT - DOMPurify for HTML
 import DOMPurify from 'isomorphic-dompurify';
 
 const clean = DOMPurify.sanitize(dirtyHtml, {
@@ -615,22 +615,22 @@ const clean = DOMPurify.sanitize(dirtyHtml, {
     ALLOWED_ATTR: ['href']
 });
 
-// ✅ CORRECTO - Escape en templates
+// ✅ CORRECT - Escape in templates
 import escapeHtml from 'escape-html';
 
 const html = `<div>${escapeHtml(userInput)}</div>`;
 
-// ✅ CORRECTO - React (auto-escape por defecto)
+// ✅ CORRECT - React (auto-escape by default)
 function SafeComponent({ userInput }: { userInput: string }) {
-    return <div>{userInput}</div>; // Escapado automático
+    return <div>{userInput}</div>; // Automatic escaping
 }
 
-// ❌ En React: dangerouslySetInnerHTML
+// ❌ In React: dangerouslySetInnerHTML
 function UnsafeComponent({ html }: { html: string }) {
-    return <div dangerouslySetInnerHTML={{ __html: html }} />; // ⚠️ Peligroso
+    return <div dangerouslySetInnerHTML={{ __html: html }} />; // ⚠️ Dangerous
 }
 
-// ✅ Seguro en React:
+// ✅ Safe in React:
 import DOMPurify from 'dompurify';
 
 function SafeHtmlComponent({ html }: { html: string }) {
@@ -641,41 +641,41 @@ function SafeHtmlComponent({ html }: { html: string }) {
 
 ---
 
-## Checklist TypeScript Específico
+## TypeScript-Specific Checklist
 
-### Seguridad General
-- [ ] NUNCA usar eval() o new Function() con input externo
-- [ ] NUNCA usar innerHTML con input no sanitizado
-- [ ] Proteger contra prototype pollution (validar keys)
-- [ ] SQL parametrizado (?, $1, no concatenación)
-- [ ] Validar paths de archivos (evitar ../)
-- [ ] Validar deserialización con Zod/Joi/class-validator
-- [ ] Sanitizar logs (no passwords/tokens)
-- [ ] Secrets en variables de entorno
-- [ ] Helmet para headers de seguridad
-- [ ] Rate limiting en endpoints sensibles
-- [ ] CORS restrictivo (no '*')
-- [ ] bcrypt/argon2 para passwords
-- [ ] JWT con verificación estricta de algoritmo
-- [ ] DOMPurify para HTML dinámico
+### General Security
+- [ ] NEVER use eval() or new Function() with external input
+- [ ] NEVER use innerHTML with unsanitized input
+- [ ] Protect against prototype pollution (validate keys)
+- [ ] Parameterized SQL (?, $1, no concatenation)
+- [ ] Validate file paths (prevent ../)
+- [ ] Validate deserialization with Zod/Joi/class-validator
+- [ ] Sanitize logs (no passwords/tokens)
+- [ ] Secrets in environment variables
+- [ ] Helmet for security headers
+- [ ] Rate limiting on sensitive endpoints
+- [ ] Restrictive CORS (no '*')
+- [ ] bcrypt/argon2 for passwords
+- [ ] JWT with strict algorithm verification
+- [ ] DOMPurify for dynamic HTML
 
 ### Express/Node.js
-- [ ] Body parser con límites de tamaño
-- [ ] mongoSanitize para NoSQL injection
-- [ ] hpp para parameter pollution
-- [ ] Graceful shutdown con SIGTERM/SIGINT handlers
-- [ ] Timeouts en conexiones DB
-- [ ] Validación de uploads (tamaño, tipo, magic bytes)
+- [ ] Body parser with size limits
+- [ ] mongoSanitize for NoSQL injection
+- [ ] hpp for parameter pollution
+- [ ] Graceful shutdown with SIGTERM/SIGINT handlers
+- [ ] Timeouts on DB connections
+- [ ] Upload validation (size, type, magic bytes)
 
 ### Frontend
 - [ ] Content Security Policy
 - [ ] Subresource Integrity (SRI)
-- [ ] HttpOnly cookies para tokens
-- [ ] Sanitización de URLs (javascript: protocol)
+- [ ] HttpOnly cookies for tokens
+- [ ] URL sanitization (javascript: protocol)
 
 ---
 
-## Referencias
+## References
 
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [Node.js Security Checklist](https://blog.risingstack.com/node-js-security-checklist/)

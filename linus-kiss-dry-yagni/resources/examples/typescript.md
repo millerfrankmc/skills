@@ -1,13 +1,13 @@
-# Ejemplos TypeScript
+# TypeScript Examples
 
 ## Anti-Clever Code
 
-**MAL**:
+**BAD**:
 ```typescript
 const process = (data: any) => data?.filter((x: any) => x?.status ?? 0)?.map((x: any) => ({...x, ts: Date.now()})) ?? [];
 ```
 
-**BIEN**:
+**GOOD**:
 ```typescript
 interface Item { status?: number; [key: string]: unknown }
 interface ProcessedItem extends Item { ts: number }
@@ -21,17 +21,17 @@ function processItems(data: Item[] | undefined): ProcessedItem[] {
 
 ---
 
-## YAGNI - Eliminar Abstracción Innecesaria
+## YAGNI - Remove Unnecessary Abstraction
 
-**MAL**:
+**BAD**:
 ```typescript
 interface IUserService {
   getUser(id: string): Promise<User>;
 }
-class UserService implements IUserService { } // Una sola implementación
+class UserService implements IUserService { } // Single implementation
 ```
 
-**BIEN**:
+**GOOD**:
 ```typescript
 class UserService {
   async getUser(id: string): Promise<User> { /* ... */ }
@@ -42,7 +42,7 @@ class UserService {
 
 ## KISS - Guard Clauses
 
-**BIEN** (guard clauses):
+**GOOD** (guard clauses):
 ```typescript
 function processOrder(order: Order | null): Result {
   if (!order) return { success: false };
@@ -55,14 +55,14 @@ function processOrder(order: Order | null): Result {
 
 ---
 
-## DRY - Centralizar
+## DRY - Centralize
 
-**BIEN** (DRY con interfaz):
+**GOOD** (DRY with interface):
 ```typescript
 interface HasName { firstName: string; lastName: string }
 
 function formatName(person: HasName): string {
   return `${person.firstName} ${person.lastName}`.trim();
 }
-// Uso: formatName(user), formatName(admin), formatName(guest)
+// Usage: formatName(user), formatName(admin), formatName(guest)
 ```

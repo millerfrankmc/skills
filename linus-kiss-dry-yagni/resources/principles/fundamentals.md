@@ -1,73 +1,73 @@
-# Fundamentos KISS-DRY-YAGNI
+# KISS-DRY-YAGNI Fundamentals
 
-Este recurso profundiza en los principios fundamentales para quien quiere entenderlos mejor.
+This resource delves into the fundamental principles for those who want to understand them better.
 
 ## KISS - Keep It Simple, Stupid
 
-### Origen
-Principio diseñado por la Marina de EE.UU. en 1960. La simplicidad debe ser el objetivo principal.
+### Origin
+Principle designed by the US Navy in 1960. Simplicity should be the main goal.
 
-### Por qué importa
-- Código simple = menos bugs
-- Código simple = más fácil de mantener
-- Código simple = más fácil de entender
-- Código simple = más rápido de desarrollar
+### Why it matters
+- Simple code = fewer bugs
+- Simple code = easier to maintain
+- Simple code = easier to understand
+- Simple code = faster to develop
 
-### La trampa
-"Simple" no significa "primitivo". Significa:
-- Fácil de entender
-- Fácil de modificar
-- Fácil de testear
-- Hace una cosa bien
+### The trap
+"Simple" doesn't mean "primitive". It means:
+- Easy to understand
+- Easy to modify
+- Easy to test
+- Does one thing well
 
 ## DRY - Don't Repeat Yourself
 
-### Origen
-Acuñado por Andy Hunt y Dave Thomas en "The Pragmatic Programmer" (1999).
+### Origin
+Coined by Andy Hunt and Dave Thomas in "The Pragmatic Programmer" (1999).
 
-### La regla
+### The rule
 "Every piece of knowledge must have a single, unambiguous, authoritative representation within a system."
 
-### Distinción clave
-- **DRY**: Mismo concepto, mismo código → centralizar
-- **No DRY**: Código similar, conceptos diferentes → mantener separado
+### Key distinction
+- **DRY**: Same concept, same code -> centralize
+- **Not DRY**: Similar code, different concepts -> keep separate
 
-### Ejemplo de distinción
+### Distinction example
 ```python
-# Mismo concepto - DRY apropiado
+# Same concept - DRY appropriate
 def validate_email(email): ...
 def validate_user_email(user): return validate_email(user.email)
 def validate_admin_email(admin): return validate_email(admin.email)
 
-# Conceptos diferentes - NO aplicar DRY
-def calculate_user_tax(user): ...  # Lógica de impuestos usuarios
-def calculate_product_tax(product): ...  # Lógica de impuestos productos
-# Aunque parecen similares, son dominios diferentes
+# Different concepts - DO NOT apply DRY
+def calculate_user_tax(user): ...  # User tax logic
+def calculate_product_tax(product): ...  # Product tax logic
+# Although they look similar, they are different domains
 ```
 
 ## YAGNI - You Aren't Gonna Need It
 
-### Origen
-Principio de Extreme Programming (XP). Atribuido a Ron Jeffries.
+### Origin
+Principle from Extreme Programming (XP). Attributed to Ron Jeffries.
 
-### La filosofía
+### The philosophy
 "Always implement things when you actually need them, never when you just foresee that you need them."
 
-### Por qué cuesta
-- Los desarrolladores queremos "hacerlo bien desde el principio"
-- Tememos que "después va a ser más difícil"
-- Nos gusta la arquitectura elegante
+### Why it's hard
+- Developers want to "do it right from the start"
+- We fear that "it will be harder later"
+- We like elegant architecture
 
-### La realidad
-- 80% de las features "por si acaso" nunca se usan
-- Agregar flexibilidad tiene costo ahora
-- Cuando necesitas la flexibilidad, ya no es la forma correcta
+### The reality
+- 80% of "just in case" features are never used
+- Adding flexibility has a cost now
+- When you need the flexibility, it's no longer the right way
 
-### Test de necesidad
-Antes de agregar algo, pregúntate:
-1. ¿Lo necesito HOY?
-2. ¿Hay un requisito explícito?
-3. ¿Hay un usuario esperando esto?
-4. ¿El dolor de no tenerlo es real y actual?
+### Need test
+Before adding something, ask yourself:
+1. Do I need it TODAY?
+2. Is there an explicit requirement?
+3. Is there a user waiting for this?
+4. Is the pain of not having it real and current?
 
-Si todas son "no" → YAGNI, no lo implementes.
+If all are "no" -> YAGNI, don't implement it.

@@ -1,13 +1,13 @@
-# Ejemplos Kotlin
+# Kotlin Examples
 
 ## Anti-Clever Code
 
-**MAL**:
+**BAD**:
 ```kotlin
 fun process(items: List<Any?>) = items.filterNotNull().filter { (it as? String)?.isNotBlank() == true }.map { it.toString().uppercase() }.takeIf { it.isNotEmpty() } ?: emptyList()
 ```
 
-**BIEN**:
+**GOOD**:
 ```kotlin
 fun processItems(items: List<Any?>): List<String> {
     val nonBlankStrings = items
@@ -20,15 +20,15 @@ fun processItems(items: List<Any?>): List<String> {
 
 ---
 
-## YAGNI - Eliminar Abstracción Innecesaria
+## YAGNI - Remove Unnecessary Abstraction
 
-**MAL**:
+**BAD**:
 ```kotlin
 interface Repository<T> { fun findById(id: String): T? }
-class UserRepository : Repository<User> { } // Una sola implementación
+class UserRepository : Repository<User> { } // Single implementation
 ```
 
-**BIEN**:
+**GOOD**:
 ```kotlin
 class UserRepository { fun findById(id: String): User? { /* ... */ } }
 ```
@@ -37,7 +37,7 @@ class UserRepository { fun findById(id: String): User? { /* ... */ } }
 
 ## KISS - Guard Clauses
 
-**BIEN** (guard clauses):
+**GOOD** (guard clauses):
 ```kotlin
 fun process(user: User?): Result {
     if (user == null) return Result.Error
@@ -49,12 +49,12 @@ fun process(user: User?): Result {
 
 ---
 
-## DRY - Centralizar
+## DRY - Centralize
 
-**BIEN** (DRY):
+**GOOD** (DRY):
 ```kotlin
 fun calculateShipping(total: Double): Double {
     return if (total > 100) 0.0 else 9.99
 }
-// Uso: calculateShipping(order.total), calculateShipping(cart.total)
+// Usage: calculateShipping(order.total), calculateShipping(cart.total)
 ```

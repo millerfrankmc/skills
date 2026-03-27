@@ -1,8 +1,8 @@
-# Ejemplos Go
+# Go Examples
 
 ## Anti-Clever Code
 
-**MAL**:
+**BAD**:
 ```go
 func process(s string) string {
     if r := regexp.MustCompile(`^(\w+)@(\w+)\.(\w+)$`); r.MatchString(s) {
@@ -12,7 +12,7 @@ func process(s string) string {
 }
 ```
 
-**BIEN**:
+**GOOD**:
 ```go
 func isValidEmail(s string) bool {
     return strings.Contains(s, "@") && strings.Contains(s, ".")
@@ -28,16 +28,16 @@ func processEmail(email string) string {
 
 ---
 
-## YAGNI - Eliminar Abstracción Innecesaria
+## YAGNI - Remove Unnecessary Abstraction
 
-**MAL**:
+**BAD**:
 ```go
 type Processor interface { Process(data string) string }
 type StringProcessor struct{}
 func (p StringProcessor) Process(data string) string { return strings.ToUpper(data) }
 ```
 
-**BIEN**:
+**GOOD**:
 ```go
 func processString(data string) string { return strings.ToUpper(data) }
 ```
@@ -46,7 +46,7 @@ func processString(data string) string { return strings.ToUpper(data) }
 
 ## KISS - Guard Clauses
 
-**BIEN** (guard clauses):
+**GOOD** (guard clauses):
 ```go
 func Process(r *Request) error {
     if r == nil { return errors.New("nil request") }
@@ -58,9 +58,9 @@ func Process(r *Request) error {
 
 ---
 
-## DRY - Centralizar
+## DRY - Centralize
 
-**BIEN** (DRY con interface):
+**GOOD** (DRY with interface):
 ```go
 type Customer interface { GetYearsActive() int }
 

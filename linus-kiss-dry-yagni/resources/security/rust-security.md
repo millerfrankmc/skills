@@ -1,67 +1,67 @@
-# Seguridad Específica - Rust
+# Language-Specific Security - Rust
 
-> Guía de protecciones de seguridad para código Rust. NUNCA eliminar estos patrones al aplicar KISS-DRY-YAGNI.
+> Security protection guide for Rust code. NEVER remove these patterns when applying KISS-DRY-YAGNI.
 >
-> **Nota especial**: Rust tiene memory safety por diseño, pero hay patrones `unsafe` y errores comunes que pueden comprometer la seguridad.
+> **Special note**: Rust has memory safety by design, but there are `unsafe` patterns and common errors that can compromise security.
 
 ---
 
 ## 1. Unsafe Code
 
-### El Problema
+### The Problem
 ```rust
-// ❌ PROHIBIDO - Uso innecesario de unsafe
+// ❌ FORBIDDEN - Unnecessary use of unsafe
 unsafe fn dangerous() {
     let ptr = 0x12345 as *mut i32;
-    *ptr = 42; // Segmentation fault potencial
+    *ptr = 42; // Potential segmentation fault
 }
 
-// ❌ PROHIBIDO - Raw pointers sin validación
+// ❌ FORBIDDEN - Raw pointers without validation
 unsafe fn process_data(ptr: *const u8, len: usize) {
     let slice = std::slice::from_raw_parts(ptr, len);
-    // Si ptr es null o len es incorrecto → UB
+    // If ptr is null or len is incorrect → UB
 }
 ```
 
-### La Solución
+### The Solution
 ```rust
-// ✅ CORRECTO - Evitar unsafe cuando sea posible
+// ✅ CORRECT - Avoid unsafe when possible
 fn safe_process(data: &[u8]) -> Result<(), Error> {
-    // El borrow checker garantiza validez
+    // The borrow checker guarantees validity
     process(data)
 }
 
-// ✅ CORRECTO - Si es inevitable, encapsular y validar
+// ✅ CORRECT - If inevitable, encapsulate and validate
 /// # Safety
-/// `ptr` debe ser válido y no null
-/// `len` debe ser el tamaño correcto del buffer
+/// `ptr` must be valid and non-null
+/// `len` must be the correct buffer size
 pub unsafe fn process_unchecked(ptr: *const u8, len: usize) {
-    // Documentar contratos de safety
+    // Document safety contracts
     assert!(!ptr.is_null(), "ptr must not be null");
     let slice = std::slice::from_raw_parts(ptr, len);
     process(slice);
 }
 
-// ✅ CORRECTO - Wrapper safe alrededor de unsafe
+// ✅ CORRECT - Safe wrapper around unsafe
 pub fn process_safe(data: &[u8]) -> Result<(), Error> {
     if data.is_empty() {
         return Err(Error::EmptyInput);
     }
 
-    // unsafe encapsulado, no expuesto al usuario
+    // unsafe encapsulated, not exposed to user
     unsafe {
         process_unchecked(data.as_ptr(), data.len());
     }
     Ok(())
 }
 
-// ✅ CORRECTO - Usar abstracciones seguras
-use std::sync::Mutex; // En lugar de spinlocks manual
+// ✅ CORRECT - Use safe abstractions
+use std::sync::Mutex; // Instead of manual spinlocks
 
-// En lugar de pthreads/raw threads
+// Instead of pthreads/raw threads
 use std::thread;
 
-// En lugar de malloc/free
+// Instead of malloc/free
 use Box::new(val);
 ```
 
@@ -79,7 +79,7 @@ pub fn safe_wrapper(input: &str) {
     }
 }
 
-// ✅ Zero-copy parsing con validación
+// ✅ Zero-copy parsing with validation
 use bytes::Bytes;
 
 fn parse_header(data: Bytes) -> Result<Header, Error> {
@@ -87,7 +87,7 @@ fn parse_header(data: Bytes) -> Result<Header, Error> {
         return Err(Error::TooShort);
     }
 
-    // Safe porque validamos el tamaño
+    // Safe because we validated size
     let header = unsafe {
         &*(data.as_ptr() as *const Header)
     };
@@ -101,13 +101,13 @@ fn parse_header(data: Bytes) -> Result<Header, Error> {
 ## 2. FFI (Foreign Function Interface)
 
 ```rust
-// ❌ PROHIBIDO - Strings C sin validación
+// ❌ FORBIDDEN - C strings without validation
 pub extern "C" fn process_string(ptr: *const c_char) {
-    let c_str = unsafe { CStr::from_ptr(ptr) }; // Crash si ptr es null
+    let c_str = unsafe { CStr::from_ptr(ptr) }; // Crash if ptr is null
     // ...
 }
 
-// ✅ CORRECTO - Validar antes de usar
+// ✅ CORRECT - Validate before using
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
@@ -127,7 +127,7 @@ pub extern "C" fn process_string_safe(ptr: *const c_char) -> i32 {
     }
 }
 
-// ✅ CORRECTO - Panic safety en FFI
+// ✅ CORRECT - Panic safety in FFI
 use std::panic::catch_unwind;
 
 #[no_mangle]
@@ -150,34 +150,34 @@ pub extern "C" fn safe_entry_point() -> i32 {
 ## 3. Panic Safety
 
 ```rust
-// ❌ PROHIBIDO - Drop que puede hacer panic
+// ❌ FORBIDDEN - Drop that can panic
 impl Drop for Resource {
     fn drop(&mut self) {
-        self.cleanup().expect("cleanup failed"); // Panic en drop!
+        self.cleanup().expect("cleanup failed"); // Panic in drop!
     }
 }
 
-// ✅ CORRECTO - Drop que nunca hace panic
+// ✅ CORRECT - Drop that never panics
 impl Drop for Resource {
     fn drop(&mut self) {
         if let Err(e) = self.cleanup() {
-            // Log error pero no panic
+            // Log error but don't panic
             eprintln!("Cleanup failed: {}", e);
         }
     }
 }
 
-// ✅ CORRECTO - std::mem::forget para casos especiales
+// ✅ CORRECT - std::mem::forget for special cases
 use std::mem;
 
 fn transfer_ownership(val: Box<Resource>) {
     let raw = Box::into_raw(val);
 
-    // Si falla, no queremos que se ejecute el drop
+    // If it fails, we don't want drop to execute
     if unsafe { transfer_to_c(raw) } {
-        mem::forget(val); // Transferido exitosamente
+        mem::forget(val); // Successfully transferred
     } else {
-        // Reconstruir el Box para que se haga drop
+        // Reconstruct Box so drop happens
         unsafe { Box::from_raw(raw) };
     }
 }
@@ -188,20 +188,20 @@ fn transfer_ownership(val: Box<Resource>) {
 ## 4. Secrets Management
 
 ```rust
-// ❌ PROHIBIDO - Strings para secrets (pueden quedar en memoria)
+// ❌ FORBIDDEN - Strings for secrets (can remain in memory)
 let password = String::from("secret123");
 
-// ✅ CORRECTO - zeroize para limpiar memoria
+// ✅ CORRECT - zeroize to clear memory
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Zeroize, ZeroizeOnDrop)]
 struct Secret {
-    #[zeroize(skip)] // No limpiar el ID
+    #[zeroize(skip)] // Don't clear the ID
     id: String,
-    value: Vec<u8>, // Esto se limpia con ceros
+    value: Vec<u8>, // This is cleared with zeros
 }
 
-// ✅ CORRECTO - Mlock para evitar swap a disco
+// ✅ CORRECT - Mlock to prevent swap to disk
 use secrets::SecretBox;
 
 fn store_secret(data: &[u8]) -> SecretBox<[u8]> {
@@ -211,34 +211,34 @@ fn store_secret(data: &[u8]) -> SecretBox<[u8]> {
     secret
 }
 
-// ✅ CORRECTO - Variables de entorno
+// ✅ CORRECT - Environment variables
 use std::env;
 
 fn get_api_key() -> Result<String, VarError> {
     env::var("API_KEY")
 }
 
-// ✅ CORRECTO - dotenv para desarrollo
+// ✅ CORRECT - dotenv for development
 use dotenv::dotenv;
 
 fn init() {
-    dotenv().ok(); // Carga .env file
+    dotenv().ok(); // Load .env file
     let key = env::var("API_KEY").expect("API_KEY must be set");
 }
 ```
 
 ---
 
-## 5. Deserialización Segura
+## 5. Safe Deserialization
 
 ```rust
-// ❌ PROHIBIDO - Deserialización sin límites
+// ❌ FORBIDDEN - Deserialization without limits
 #[derive(Deserialize)]
 struct Config {
-    data: Vec<u8>, // Puede ser cualquier tamaño!
+    data: Vec<u8>, // Can be any size!
 }
 
-// ✅ CORRECTO - Validación de tamaño con serde
+// ✅ CORRECT - Size validation with serde
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -258,15 +258,15 @@ where
     Ok(vec)
 }
 
-// ✅ CORRECTO - Deserialización segura de JSON
+// ✅ CORRECT - Safe JSON deserialization
 use serde_json;
 
 fn parse_json_safe(input: &str) -> Result<Value, Error> {
-    // Limitar profundidad de anidamiento
+    // Limit nesting depth
     let deserializer = serde_json::Deserializer::from_str(input);
     let value = serde_json::Value::deserialize(deserializer)?;
 
-    // Validar tamaño después de parsear
+    // Validate size after parsing
     if serde_json::to_string(&value)?.len() > MAX_JSON_SIZE {
         return Err(Error::TooLarge);
     }
@@ -280,10 +280,10 @@ fn parse_json_safe(input: &str) -> Result<Value, Error> {
 ## 6. SQL Injection
 
 ```rust
-// ❌ PROHIBIDO - Formato de strings
+// ❌ FORBIDDEN - String formatting
 let query = format!("SELECT * FROM users WHERE id = {}", user_id);
 
-// ✅ CORRECTO - sqlx con queries parametrizadas
+// ✅ CORRECT - sqlx with parameterized queries
 use sqlx::query_as;
 
 let user: User = query_as(
@@ -293,21 +293,21 @@ let user: User = query_as(
 .fetch_one(&pool)
 .await?;
 
-// ✅ CORRECTO - sea-orm (ORM type-safe)
+// ✅ CORRECT - sea-orm (type-safe ORM)
 use sea_orm::{entity::*, query::*};
 
 let user = User::find_by_id(user_id)
     .one(&db)
     .await?;
 
-// ✅ CORRECTO - Diesel (ORM compile-time checked)
+// ✅ CORRECT - Diesel (compile-time checked ORM)
 use diesel::prelude::*;
 
 let results = users
     .filter(id.eq(user_id))
     .load::<User>(&connection)?;
 
-// ✅ CORRECTO - tokio-postgres
+// ✅ CORRECT - tokio-postgres
 let row = client
     .query_one(
         "SELECT name FROM users WHERE id = $1",
@@ -318,7 +318,7 @@ let row = client
 
 ---
 
-## 7. HTTP Seguro (Axum/Actix/Rocket)
+## 7. Secure HTTP (Axum/Actix/Rocket)
 
 ### Axum
 ```rust
@@ -333,14 +333,14 @@ use tower_http::{
     timeout::TimeoutLayer,
 };
 
-// ✅ CORRECTO - Timeouts y límites
+// ✅ CORRECT - Timeouts and limits
 let app = Router::new()
     .route("/upload", post(upload_handler))
     .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024)) // 10MB max
     .layer(TimeoutLayer::new(Duration::from_secs(30)))
     .with_state(pool);
 
-// ✅ CORRECTO - Validación de input
+// ✅ CORRECT - Input validation
 use validator::Validate;
 
 #[derive(Deserialize, Validate)]
@@ -361,7 +361,7 @@ async fn create_user(
     payload.validate()
         .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
 
-    // Procesar...
+    // Process...
     Ok(StatusCode::CREATED)
 }
 ```
@@ -394,11 +394,11 @@ async fn main() -> std::io::Result<()> {
 
 ---
 
-## 8. Cryptografía
+## 8. Cryptography
 
 ### Password Hashing
 ```rust
-// ✅ CORRECTO - argon2 (recomendado)
+// ✅ CORRECT - argon2 (recommended)
 use argon2::{
     password_hash::{
         rand_core::OsRng,
@@ -425,7 +425,7 @@ fn verify_password(password: &str, hash: &str) -> Result<bool, argon2::Error> {
     Ok(argon2.verify_password(password.as_bytes(), &parsed_hash).is_ok())
 }
 
-// ✅ CORRECTO - ring para criptografía general
+// ✅ CORRECT - ring for general cryptography
 use ring::{
     aead::{Aes256Gcm, Nonce, UnboundKey, AES_256_GCM},
     rand::{SecureRandom, SystemRandom},
@@ -486,10 +486,10 @@ fn verify_token(token: &str, secret: &[u8]) -> Result<Claims, Error> {
 
 ---
 
-## 9. Concurrencia Segura
+## 9. Safe Concurrency
 
 ```rust
-// ✅ CORRECTO - Arc + Mutex para datos compartidos
+// ✅ CORRECT - Arc + Mutex for shared data
 use std::sync::{Arc, Mutex};
 
 let data = Arc::new(Mutex::new(0));
@@ -504,35 +504,35 @@ for _ in 0..10 {
     handles.push(handle);
 }
 
-// ✅ CORRECTO - RwLock para lectura frecuente
+// ✅ CORRECT - RwLock for frequent reads
 use std::sync::RwLock;
 
 let config = Arc::new(RwLock::new(Config::default()));
 
-// Muchos lectores
+// Many readers
 let read_config = Arc::clone(&config);
 thread::spawn(move || {
     let cfg = read_config.read().unwrap();
     println!("{:?}", *cfg);
 });
 
-// Pocos escritores
+// Few writers
 let write_config = Arc::clone(&config);
 thread::spawn(move || {
     let mut cfg = write_config.write().unwrap();
     cfg.update();
 });
 
-// ✅ CORRECTO - tokio::sync para async
+// ✅ CORRECT - tokio::sync for async
 use tokio::sync::{RwLock, Mutex};
 
 async fn process_data(data: Arc<RwLock<Data>>) {
-    // Bloqueo asíncrono, no bloquea el thread
+    // Async lock, doesn't block thread
     let guard = data.read().await;
     process(&*guard).await;
 }
 
-// ✅ CORRECTO - Channels para comunicación
+// ✅ CORRECT - Channels for communication
 use tokio::sync::mpsc;
 
 let (tx, mut rx) = mpsc::channel(100);
@@ -546,7 +546,7 @@ tokio::spawn(async move {
 
 ---
 
-## 10. Validación de Input
+## 10. Input Validation
 
 ```rust
 use validator::{Validate, ValidationError};
@@ -585,16 +585,16 @@ fn validate_password_strength(password: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-// ✅ CORRECTO - Validación de archivos
+// ✅ CORRECT - File validation
 use mime::Mime;
 
 fn validate_file(data: &[u8], declared_mime: &str) -> Result<(), Error> {
-    // Validar tamaño
+    // Validate size
     if data.len() > MAX_FILE_SIZE {
         return Err(Error::FileTooLarge);
     }
 
-    // Validar magic bytes
+    // Validate magic bytes
     let detected = infer::get(data)
         .ok_or(Error::UnknownFileType)?;
 
@@ -608,47 +608,47 @@ fn validate_file(data: &[u8], declared_mime: &str) -> Result<(), Error> {
 
 ---
 
-## Checklist Rust Específico
+## Rust-Specific Checklist
 
 ### Unsafe Code
-- [ ] Evitar unsafe cuando sea posible
-- [ ] Documentar contratos de safety en comentarios
-- [ ] Validar precondiciones (null checks, bounds)
-- [ ] Encapsular unsafe en APIs seguras
-- [ ] Usar abstracciones safe (Mutex vs spinlocks)
+- [ ] Avoid unsafe when possible
+- [ ] Document safety contracts in comments
+- [ ] Validate preconditions (null checks, bounds)
+- [ ] Encapsulate unsafe in safe APIs
+- [ ] Use safe abstractions (Mutex vs spinlocks)
 
-### Seguridad
-- [ ] Variables de entorno para secrets (no hardcodear)
-- [ ] zeroize para limpiar secrets de memoria
-- [ ] Queries parametrizadas (sqlx, diesel, sea-orm)
-- [ ] Validación de input con validator
-- [ ] Passwords con argon2
-- [ ] JWT con validación estricta
-- [ ] Timeouts en operaciones I/O
-- [ ] Limites de tamaño en deserialización
+### Security
+- [ ] Environment variables for secrets (no hardcoding)
+- [ ] zeroize to clear secrets from memory
+- [ ] Parameterized queries (sqlx, diesel, sea-orm)
+- [ ] Input validation with validator
+- [ ] Passwords with argon2
+- [ ] JWT with strict validation
+- [ ] Timeouts on I/O operations
+- [ ] Size limits on deserialization
 
 ### FFI
-- [ ] Validar null pointers antes de usar
-- [ ] panic::catch_unwind en boundaries FFI
-- [ ] CString::new() para convertir a C strings
-- [ ] Documentar safety contracts
+- [ ] Validate null pointers before using
+- [ ] panic::catch_unwind at FFI boundaries
+- [ ] CString::new() for converting to C strings
+- [ ] Document safety contracts
 
-### Concurrencia
-- [ ] Arc para shared ownership entre threads
-- [ ] Mutex/RwLock para datos mutables compartidos
-- [ ] tokio::sync para async
-- [ ] Channels para comunicación entre threads
-- [ ] Evitar deadlocks (orden consistente de locks)
+### Concurrency
+- [ ] Arc for shared ownership between threads
+- [ ] Mutex/RwLock for shared mutable data
+- [ ] tokio::sync for async
+- [ ] Channels for inter-thread communication
+- [ ] Avoid deadlocks (consistent lock ordering)
 
-### Recursos
-- [ ] Graceful shutdown con tokio::signal
-- [ ] Límites de request body (tower-http)
-- [ ] Timeouts en clientes HTTP
-- [ ] Drop impls que nunca paniquean
+### Resources
+- [ ] Graceful shutdown with tokio::signal
+- [ ] Request body limits (tower-http)
+- [ ] Timeouts in HTTP clients
+- [ ] Drop impls that never panic
 
 ---
 
-## Referencias
+## References
 
 - [Rust Security Guidelines](https://anixe.github.io/rust-security-guidelines/)
 - [Rust Secure Coding](https://github.com/rust-secure-code/safety-dance)

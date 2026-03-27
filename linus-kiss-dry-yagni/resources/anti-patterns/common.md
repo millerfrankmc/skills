@@ -1,8 +1,8 @@
-# Anti-Patrones Comunes
+# Common Anti-Patterns
 
-Catálogo de problemas frecuentes y sus soluciones inmediatas.
+Catalog of frequent problems and their immediate solutions.
 
-## Índice
+## Index
 
 1. [Pyramid of Doom](#pyramid-of-doom)
 2. [God Function](#god-function)
@@ -17,11 +17,11 @@ Catálogo de problemas frecuentes y sus soluciones inmediatas.
 
 ## Pyramid of Doom
 
-**Señales:** Múltiples niveles de if/else anidados (>2 niveles)
+**Signs:** Multiple levels of nested if/else (>2 levels)
 
-**Problema:** Código imposible de seguir, lógica escondida
+**Problem:** Impossible to follow code, hidden logic
 
-**Antes:**
+**Before:**
 ```python
 def process_order(order):
     if order:
@@ -33,7 +33,7 @@ def process_order(order):
     return None
 ```
 
-**Después:**
+**After:**
 ```python
 def process_order(order):
     if not order: return None
@@ -48,22 +48,22 @@ def process_order(order):
 
 ## God Function
 
-**Señales:** Función hace 3+ cosas diferentes, >20 líneas
+**Signs:** Function does 3+ different things, >20 lines
 
-**Problema:** Difícil de testear, reusar, y entender
+**Problem:** Difficult to test, reuse, and understand
 
-**Antes:**
+**Before:**
 ```typescript
 function processUser(data) {
-  // Validar (10 líneas)
-  // Transformar (15 líneas)
-  // Guardar en DB (10 líneas)
-  // Enviar email (10 líneas)
-  // Loggear (5 líneas)
+  // Validate (10 lines)
+  // Transform (15 lines)
+  // Save to DB (10 lines)
+  // Send email (10 lines)
+  // Log (5 lines)
 }
 ```
 
-**Después:**
+**After:**
 ```typescript
 function processUser(data) {
   const validated = validateUser(data);
@@ -79,16 +79,16 @@ function processUser(data) {
 
 ## Parameter Explosion
 
-**Señales:** Función con 5+ parámetros
+**Signs:** Function with 5+ parameters
 
-**Problema:** Difícil de llamar, fácil de confundir orden
+**Problem:** Difficult to call, easy to confuse order
 
-**Antes:**
+**Before:**
 ```go
 func CreateUser(name, email, phone, address, city, country, zip string, active bool, premium bool) error
 ```
 
-**Después:**
+**After:**
 ```go
 type UserData struct {
     Name, Email, Phone string
@@ -103,11 +103,11 @@ func CreateUser(data UserData) error
 
 ## Interface Pollution
 
-**Señales:** Interface con 1 implementación
+**Signs:** Interface with 1 implementation
 
-**Problema:** Complejidad innecesaria, código más difícil de navegar
+**Problem:** Unnecessary complexity, harder to navigate code
 
-**Antes:**
+**Before:**
 ```typescript
 interface IUserRepository {
   findById(id: string): Promise<User>;
@@ -115,11 +115,11 @@ interface IUserRepository {
 }
 
 class UserRepository implements IUserRepository {
-  // única implementación
+  // single implementation
 }
 ```
 
-**Después:**
+**After:**
 ```typescript
 class UserRepository {
   async findById(id: string): Promise<User> { /* ... */ }
@@ -131,16 +131,16 @@ class UserRepository {
 
 ## Abstraction Addiction
 
-**Señales:** Fábricas de fábricas, servicios que solo delegan
+**Signs:** Factories of factories, services that only delegate
 
-**Problema:** Indirección sin valor, stack traces imposibles
+**Problem:** Indirection without value, impossible stack traces
 
-**Antes:**
+**Before:**
 ```java
 UserService -> UserRepositoryFactory -> UserRepositoryImpl
 ```
 
-**Después:**
+**After:**
 ```java
 UserService -> UserRepository
 ```
@@ -149,21 +149,21 @@ UserService -> UserRepository
 
 ## Future Proofing
 
-**Señales:** Código "por si acaso lo necesitamos"
+**Signs:** Code "just in case we need it"
 
-**Problema:** 80% nunca se usa, complejidad real ahora
+**Problem:** 80% never used, real complexity now
 
-**Antes:**
+**Before:**
 ```python
 class UserService:
     def create_user(self, data):
-        # Soporte para múltiples tipos de usuario (solo usamos uno)
-        # Soporte para validación pluguable (solo usamos una)
-        # Soporte para múltiples backends (solo usamos uno)
+        # Support for multiple user types (only using one)
+        # Support for pluggable validation (only using one)
+        # Support for multiple backends (only using one)
         pass
 ```
 
-**Después:**
+**After:**
 ```python
 def create_user(data):
     if not is_valid(data): raise ValueError("Invalid")
@@ -174,16 +174,16 @@ def create_user(data):
 
 ## Clever Code
 
-**Señales:** One-liners, operadores crípticos, "mira qué corto"
+**Signs:** One-liners, cryptic operators, "look how short"
 
-**Problema:** Difícil de entender, debugging difícil
+**Problem:** Difficult to understand, debugging difficult
 
-**Antes:**
+**Before:**
 ```python
 result = data and [x for x in data if x.valid] or default
 ```
 
-**Después:**
+**After:**
 ```python
 if not data:
     return default
@@ -196,22 +196,22 @@ return valid_items if valid_items else default
 
 ## Comment Cancer
 
-**Señales:** Comentarios explicando "qué" hace el código
+**Signs:** Comments explaining "what" the code does
 
-**Problema:** Comentarios mienten, código no
+**Problem:** Comments lie, code doesn't
 
-**Antes:**
+**Before:**
 ```python
-# Incrementa el contador
+# Increment the counter
 i = i + 1
 
-# Valida el email
+# Validate the email
 if "@" in email and "." in email:
-    # Es válido
+    # It's valid
     valid = True
 ```
 
-**Después:**
+**After:**
 ```python
 counter += 1
 
@@ -221,15 +221,15 @@ if is_valid_email(email):
 
 ---
 
-## Resumen de Señales de Alerta
+## Warning Signs Summary
 
-| Anti-Patrón | Señal Principal | Acción Inmediata |
-|-------------|-----------------|------------------|
-| Pyramid of Doom | >2 niveles de if | Guard clauses |
-| God Function | >20 líneas | Extraer funciones |
-| Parameter Explosion | >4 parámetros | Objeto config |
-| Interface Pollution | 1 implementación | Eliminar interface |
-| Abstraction Addiction | Fábricas de fábricas | Simplificar |
-| Future Proofing | Código no usado | Eliminar |
-| Clever Code | One-liners | Expandir |
-| Comment Cancer | // qué hace | Renombrar |
+| Anti-Pattern | Main Sign | Immediate Action |
+|--------------|-----------|------------------|
+| Pyramid of Doom | >2 levels of if | Guard clauses |
+| God Function | >20 lines | Extract functions |
+| Parameter Explosion | >4 parameters | Object config |
+| Interface Pollution | 1 implementation | Remove interface |
+| Abstraction Addiction | Factories of factories | Simplify |
+| Future Proofing | Unused code | Remove |
+| Clever Code | One-liners | Expand |
+| Comment Cancer | // what it does | Rename |

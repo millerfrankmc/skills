@@ -1,50 +1,50 @@
-# Seguridad Específica - Go
+# Language-Specific Security - Go
 
-> Guía de protecciones de seguridad para código Go. NUNCA eliminar estos patrones al aplicar KISS-DRY-YAGNI.
+> Security protection guide for Go code. NEVER remove these patterns when applying KISS-DRY-YAGNI.
 
 ---
 
 ## 1. Memory Safety
 
 ### Buffer Overflows
-Go tiene memory safety por defecto, pero hay excepciones:
+Go has memory safety by default, but there are exceptions:
 
 ```go
-// ❌ PROHIBIDO - Slice access sin bounds checking si se desactiva
-// (En realidad Go siempre hace bounds checking, pero hay patrones riesgosos)
+// ❌ FORBIDDEN - Slice access without bounds checking if disabled
+// (Actually Go always does bounds checking, but there are risky patterns)
 
-// ⚠️ CUIDADO - Uso de unsafe
+// ⚠️ CAUTION - Using unsafe
 import "unsafe"
 
 func dangerous(data []byte) {
-    // NUNCA hacer esto sin validación EXTREMA
+    // NEVER do this without EXTREME validation
     ptr := unsafe.Pointer(&data[0])
-    // Manipulación de memoria raw
+    // Raw memory manipulation
 }
 
-// ✅ CORRECTO - Siempre validar bounds
+// ✅ CORRECT - Always validate bounds
 func safe(data []byte, index int) byte {
     if index < 0 || index >= len(data) {
-        panic("index out of bounds") // O retornar error
+        panic("index out of bounds") // Or return error
     }
     return data[index]
 }
 
-// ✅ CORRECTO - Usar copy en lugar de manipulación manual
+// ✅ CORRECT - Use copy instead of manual manipulation
 func copyData(dst, src []byte) int {
-    return copy(dst, src) // Seguro, maneja bounds automáticamente
+    return copy(dst, src) // Safe, handles bounds automatically
 }
 ```
 
 ### Integer Overflow
 ```go
-// ⚠️ CUIDADO - Integer overflow en operaciones aritméticas
+// ⚠️ CAUTION - Integer overflow in arithmetic operations
 func allocateBuffer(size int) []byte {
-    // Si size es negativo o muy grande, podría causar problemas
-    return make([]byte, size) // Panic si size < 0 o muy grande
+    // If size is negative or very large, it could cause problems
+    return make([]byte, size) // Panic if size < 0 or too large
 }
 
-// ✅ CORRECTO - Validar antes de asignar
+// ✅ CORRECT - Validate before allocating
 func allocateBufferSafe(size int) ([]byte, error) {
     const maxSize = 100 * 1024 * 1024 // 100MB
     if size < 0 || size > maxSize {
@@ -56,11 +56,11 @@ func allocateBufferSafe(size int) ([]byte, error) {
 
 ---
 
-## 2. Goroutines y Concurrencia
+## 2. Goroutines and Concurrency
 
 ### Race Conditions
 ```go
-// ❌ PROHIBIDO - Data race
+// ❌ FORBIDDEN - Data race
 var counter int
 
 func increment() {
@@ -69,7 +69,7 @@ func increment() {
     }()
 }
 
-// ✅ CORRECTO - sync.Mutex
+// ✅ CORRECT - sync.Mutex
 var (
     counter int
     mu      sync.Mutex
@@ -83,7 +83,7 @@ func incrementSafe() {
     }()
 }
 
-// ✅ CORRECTO - sync/atomic para operaciones simples
+// ✅ CORRECT - sync/atomic for simple operations
 import "sync/atomic"
 
 var counter int64
@@ -92,7 +92,7 @@ func incrementAtomic() {
     atomic.AddInt64(&counter, 1)
 }
 
-// ✅ CORRECTO - sync.Map para mapas concurrentes
+// ✅ CORRECT - sync.Map for concurrent maps
 var cache sync.Map
 
 func getFromCache(key string) (interface{}, bool) {
@@ -102,26 +102,26 @@ func getFromCache(key string) (interface{}, bool) {
 
 ### Deadlocks
 ```go
-// ❌ PROHIBIDO - Lock anidado sin orden
+// ❌ FORBIDDEN - Nested lock without order
 func transfer(from, to *Account, amount int) {
     from.mu.Lock()
     defer from.mu.Unlock()
 
-    to.mu.Lock() // Deadlock posible si otra goroutine hace transfer(to, from)
+    to.mu.Lock() // Possible deadlock if another goroutine does transfer(to, from)
     defer to.mu.Unlock()
 
     from.Balance -= amount
     to.Balance += amount
 }
 
-// ✅ CORRECTO - Orden de locks global
+// ✅ CORRECT - Global lock order
 var (
     accountsMu sync.Mutex
-    globalOrder = make(map[*Account]int) // Asignar orden a cada cuenta
+    globalOrder = make(map[*Account]int) // Assign order to each account
 )
 
 func transferSafe(from, to *Account, amount int) error {
-    // Siempre adquirir en orden de ID
+    // Always acquire in ID order
     first, second := from, to
     if globalOrder[from] > globalOrder[to] {
         first, second = to, from
@@ -144,19 +144,19 @@ func transferSafe(from, to *Account, amount int) error {
 
 ### Channel Safety
 ```go
-// ❌ PROHIBIDO - Cerrar canal desde receiver
+// ❌ FORBIDDEN - Close channel from receiver
 func bad() {
     ch := make(chan int)
     go func() {
         for v := range ch {
             if v == -1 {
-                close(ch) // ❌ Solo el sender debe cerrar
+                close(ch) // ❌ Only sender should close
             }
         }
     }()
 }
 
-// ✅ CORRECTO - Context para cancelación
+// ✅ CORRECT - Context for cancellation
 func good() {
     ctx, cancel := context.WithCancel(context.Background())
     defer cancel()
@@ -173,7 +173,7 @@ func good() {
         }
     }()
 
-    // Cancelar desde el coordinador
+    // Cancel from coordinator
     cancel()
 }
 ```
@@ -183,13 +183,13 @@ func good() {
 ## 3. SQL Injection
 
 ```go
-// ❌ PROHIBIDO - Concatenación de strings
+// ❌ FORBIDDEN - String concatenation
 func getUser(db *sql.DB, username string) (*User, error) {
     query := fmt.Sprintf("SELECT * FROM users WHERE username = '%s'", username)
     return db.Query(query)
 }
 
-// ✅ CORRECTO - Queries parametrizadas
+// ✅ CORRECT - Parameterized queries
 func getUserSafe(db *sql.DB, username string) (*User, error) {
     row := db.QueryRow(
         "SELECT id, username, email FROM users WHERE username = ?",
@@ -198,7 +198,7 @@ func getUserSafe(db *sql.DB, username string) (*User, error) {
     // ...
 }
 
-// ✅ CORRECTO - sqlx para named parameters
+// ✅ CORRECT - sqlx for named parameters
 import "github.com/jmoiron/sqlx"
 
 func getUserNamed(db *sqlx.DB, username string) (*User, error) {
@@ -210,32 +210,32 @@ func getUserNamed(db *sqlx.DB, username string) (*User, error) {
     return &user, err
 }
 
-// ✅ CORRECTO - Squirrel para queries dinámicas
+// ✅ CORRECT - Squirrel for dynamic queries
 import sq "github.com/Masterminds/squirrel"
 
 func buildQuery(userType string, active bool) (string, []interface{}, error) {
     return sq.Select("*").From("users").
         Where(sq.Eq{"type": userType}).
         Where(sq.Eq{"active": active}).
-        ToSql() // Genera query parametrizada
+        ToSql() // Generates parameterized query
 }
 ```
 
 ---
 
-## 4. Deserialización Segura
+## 4. Safe Deserialization
 
 ### JSON
 ```go
-// ⚠️ CUIDADO - Deserialización en interface{} permite tipos inesperados
+// ⚠️ CAUTION - Deserialization into interface{} allows unexpected types
 func processJSON(data []byte) error {
     var result interface{}
     json.Unmarshal(data, &result)
-    // result podría ser cualquier cosa
+    // result could be anything
     return nil
 }
 
-// ✅ CORRECTO - Estructura estricta con validación
+// ✅ CORRECT - Strict structure with validation
 type UserInput struct {
     Name  string `json:"name" validate:"required,max=100"`
     Email string `json:"email" validate:"required,email"`
@@ -248,7 +248,7 @@ func processJSONSafe(data []byte) (*UserInput, error) {
         return nil, fmt.Errorf("invalid JSON: %w", err)
     }
 
-    // Validación con go-playground/validator
+    // Validation with go-playground/validator
     validate := validator.New()
     if err := validate.Struct(input); err != nil {
         return nil, fmt.Errorf("validation failed: %w", err)
@@ -262,13 +262,13 @@ func processJSONSafe(data []byte) (*UserInput, error) {
 ```go
 import "encoding/xml"
 
-// ❌ VULNERABLE A XXE por defecto
+// ❌ VULNERABLE TO XXE by default
 type Config struct {
     XMLName xml.Name `xml:"config"`
     Value   string   `xml:"value"`
 }
 
-// ✅ CORRECTO - Desactivar entidades externas
+// ✅ CORRECT - Disable external entities
 import (
     "encoding/xml"
     "io"
@@ -277,7 +277,7 @@ import (
 func parseXMLSafe(r io.Reader) (*Config, error) {
     decoder := xml.NewDecoder(r)
     decoder.Strict = true
-    // En Go 1.10+, las entidades externas están desactivadas por defecto
+    // In Go 1.10+, external entities are disabled by default
 
     var config Config
     if err := decoder.Decode(&config); err != nil {
@@ -289,15 +289,15 @@ func parseXMLSafe(r io.Reader) (*Config, error) {
 
 ---
 
-## 5. HTTP Seguro
+## 5. Secure HTTP
 
-### Servidor HTTP
+### HTTP Server
 ```go
-// ❌ PROHIBIDO - Servidor sin timeouts
+// ❌ FORBIDDEN - Server without timeouts
 srv := &http.Server{Addr: ":8080"}
-srv.ListenAndServe() // Sin timeouts = resource exhaustion
+srv.ListenAndServe() // No timeouts = resource exhaustion
 
-// ✅ CORRECTO - Timeouts explícitos
+// ✅ CORRECT - Explicit timeouts
 srv := &http.Server{
     Addr:         ":8080",
     ReadTimeout:  5 * time.Second,
@@ -314,12 +314,12 @@ go func() {
     }
 }()
 
-// Esperar señal de terminación
+// Wait for termination signal
 quit := make(chan os.Signal, 1)
 signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 <-quit
 
-// Shutdown graceful
+// Graceful shutdown
 ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 defer cancel()
 if err := srv.Shutdown(ctx); err != nil {
@@ -327,12 +327,12 @@ if err := srv.Shutdown(ctx); err != nil {
 }
 ```
 
-### Cliente HTTP
+### HTTP Client
 ```go
-// ❌ PROHIBIDO - Cliente sin timeouts
-resp, err := http.Get("https://api.example.com") // Puede colgarse para siempre
+// ❌ FORBIDDEN - Client without timeouts
+resp, err := http.Get("https://api.example.com") // Can hang forever
 
-// ✅ CORRECTO - Cliente con timeouts y context
+// ✅ CORRECT - Client with timeouts and context
 type Client struct {
     httpClient *http.Client
 }
@@ -367,14 +367,14 @@ func (c *Client) Request(ctx context.Context, url string) (*http.Response, error
 
 ---
 
-## 6. Cryptografía
+## 6. Cryptography
 
 ### Password Hashing
 ```go
 import "golang.org/x/crypto/bcrypt"
 
 func hashPassword(password string) (string, error) {
-    // Cost 12 es un buen balance (default es 10)
+    // Cost 12 is a good balance (default is 10)
     bytes, err := bcrypt.GenerateFromPassword([]byte(password), 12)
     return string(bytes), err
 }
@@ -384,7 +384,7 @@ func verifyPassword(password, hash string) bool {
     return err == nil
 }
 
-// ✅ Alternativa - Argon2 (más moderno)
+// ✅ Alternative - Argon2 (more modern)
 import "golang.org/x/crypto/argon2"
 
 func hashPasswordArgon2(password string) string {
@@ -400,7 +400,7 @@ func hashPasswordArgon2(password string) string {
         32,     // key length
     )
 
-    // Almacenar salt + hash
+    // Store salt + hash
     return base64.StdEncoding.EncodeToString(salt) + "$" +
            base64.StdEncoding.EncodeToString(hash)
 }
@@ -431,7 +431,7 @@ func createToken(userID string, secret []byte) (string, error) {
 
 func verifyToken(tokenString string, secret []byte) (*Claims, error) {
     token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-        // Verificar algoritmo
+        // Verify algorithm
         if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
             return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
         }
@@ -455,10 +455,10 @@ func verifyToken(tokenString string, secret []byte) (*Claims, error) {
 ## 7. Secrets Management
 
 ```go
-// ❌ PROHIBIDO - Hardcodear secrets
+// ❌ FORBIDDEN - Hardcoding secrets
 const APIKey = "sk_live_1234567890"
 
-// ✅ CORRECTO - Variables de entorno
+// ✅ CORRECT - Environment variables
 import "os"
 
 func getAPIKey() (string, error) {
@@ -469,7 +469,7 @@ func getAPIKey() (string, error) {
     return key, nil
 }
 
-// ✅ CORRECTO - Cargar en startup y validar
+// ✅ CORRECT - Load at startup and validate
 type Config struct {
     APIKey    string
     DBURL     string
@@ -493,7 +493,7 @@ func LoadConfig() (*Config, error) {
     return cfg, nil
 }
 
-// Inyectar config en handlers (no usar variable global)
+// Inject config into handlers (don't use global variable)
 type Server struct {
     config *Config
     db     *sql.DB
@@ -502,7 +502,7 @@ type Server struct {
 
 ---
 
-## 8. Validación de Input
+## 8. Input Validation
 
 ```go
 import "github.com/go-playground/validator/v10"
@@ -527,20 +527,20 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Procesar...
+    // Process...
 }
 
-// ✅ Validación adicional para casos especiales
+// ✅ Additional validation for special cases
 func sanitizeFilename(name string) (string, error) {
-    // Eliminar path traversal
+    // Remove path traversal
     clean := filepath.Base(name)
 
-    // Validar caracteres permitidos
+    // Validate allowed characters
     if matched, _ := regexp.MatchString(`^[a-zA-Z0-9._-]+$`, clean); !matched {
         return "", errors.New("invalid filename")
     }
 
-    // Validar extensión
+    // Validate extension
     ext := filepath.Ext(clean)
     allowed := map[string]bool{".txt": true, ".pdf": true, ".jpg": true}
     if !allowed[ext] {
@@ -553,35 +553,35 @@ func sanitizeFilename(name string) (string, error) {
 
 ---
 
-## Checklist Go Específico
+## Go-Specific Checklist
 
-### Concurrencia
-- [ ] Proteger datos compartidos con sync.Mutex o sync/atomic
-- [ ] Usar sync.Map para caches concurrentes
-- [ ] Evitar deadlocks con orden consistente de locks
-- [ ] No cerrar channels desde receivers
-- [ ] Usar context para cancelación de goroutines
+### Concurrency
+- [ ] Protect shared data with sync.Mutex or sync/atomic
+- [ ] Use sync.Map for concurrent caches
+- [ ] Avoid deadlocks with consistent lock ordering
+- [ ] Don't close channels from receivers
+- [ ] Use context for goroutine cancellation
 
-### Seguridad
-- [ ] SQL queries parametrizadas (?, no fmt.Sprintf)
-- [ ] Validación estricta de JSON con structs
-- [ ] HTTP server con timeouts (ReadTimeout, WriteTimeout)
-- [ ] HTTP client con timeouts
-- [ ] Graceful shutdown con signal handling
-- [ ] bcrypt/argon2 para passwords
-- [ ] Secrets en variables de entorno
-- [ ] Validación de input con go-playground/validator
-- [ ] No usar unsafe sin justificación extrema
-- [ ] Validar bounds antes de make() con tamaños grandes
+### Security
+- [ ] SQL parameterized queries (?, not fmt.Sprintf)
+- [ ] Strict JSON validation with structs
+- [ ] HTTP server with timeouts (ReadTimeout, WriteTimeout)
+- [ ] HTTP client with timeouts
+- [ ] Graceful shutdown with signal handling
+- [ ] bcrypt/argon2 for passwords
+- [ ] Secrets in environment variables
+- [ ] Input validation with go-playground/validator
+- [ ] Don't use unsafe without extreme justification
+- [ ] Validate bounds before make() with large sizes
 
-### Recursos
-- [ ] Context with timeout para operaciones I/O
-- [ ] Cerrar files/connections con defer
-- [ ] Rate limiting en handlers HTTP
+### Resources
+- [ ] Context with timeout for I/O operations
+- [ ] Close files/connections with defer
+- [ ] Rate limiting in HTTP handlers
 
 ---
 
-## Referencias
+## References
 
 - [Go Security Cheat Sheet](https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Go_Security_Cheat_Sheet.md)
 - [Go Secure Coding Practices](https://securego.io/)

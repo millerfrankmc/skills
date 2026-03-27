@@ -1,57 +1,57 @@
-# Rendimiento Específico - Kotlin
+# Performance Specific - Kotlin
 
-> Guía de optimizaciones de rendimiento para código Kotlin (JVM/Android). NUNCA sacrificar rendimiento obvio por "código más limpio".
+> Guide for performance optimizations in Kotlin code (JVM/Android). NEVER sacrifice obvious performance for "cleaner code".
 
 ---
 
 ## 1. Coroutines vs Threads
 
-### El Problema
+### The Problem
 
 ```kotlin
-// ❌ INEFICIENTE - Crear threads manualmente
+// ❌ INEFFICIENT - Creating threads manually
 fun processConcurrently(items: List<Item>) {
     val threads = items.map { item ->
         Thread { process(item) }.apply { start() }
     }
-    threads.forEach { it.join() } // Overhead de threads del OS
+    threads.forEach { it.join() } // OS thread overhead
 }
 
-// ❌ INEFICIENTE - Blocking calls en coroutines
+// ❌ INEFFICIENT - Blocking calls in coroutines
 suspend fun fetchData() {
     withContext(Dispatchers.IO) {
-        // Bloquea el thread del pool
+        // Blocks the pool thread
         Thread.sleep(1000)
     }
 }
 ```
 
-### La Solución
+### The Solution
 
 ```kotlin
-// ✅ CORRECTO - Coroutines con dispatchers apropiados
+// ✅ CORRECT - Coroutines with appropriate dispatchers
 import kotlinx.coroutines.*
 
 suspend fun processConcurrently(items: List<Item>) {
-    // Lanzar todas las coroutines concurrentemente
+    // Launch all coroutines concurrently
     val jobs = items.map { item ->
         async(Dispatchers.Default) {
             process(item)
         }
     }
 
-    // Esperar todos los resultados
+    // Wait for all results
     val results = jobs.awaitAll()
 }
 
-// ✅ CORRECTO - Suspend functions no bloqueantes
+// ✅ CORRECT - Non-blocking suspend functions
 suspend fun fetchData(): Data {
-    // delay es suspend, no bloquea el thread
+    // delay is suspend, doesn't block thread
     delay(1000)
     return Data()
 }
 
-// ✅ CORRECTO - Flow para streams de datos
+// ✅ CORRECT - Flow for data streams
 import kotlinx.coroutines.flow.*
 
 fun fetchPaginatedData(): Flow<Page> = flow {
@@ -60,14 +60,14 @@ fun fetchPaginatedData(): Flow<Page> = flow {
         val data = fetchPage(page++) // Suspend function
         emit(data)
     } while (data.hasMore)
-}.buffer(10) // Buffer para backpressure
+}.buffer(10) // Buffer for backpressure
 
-// Consumir
+// Consume
 fetchPaginatedData()
     .map { process(it) }
     .collect { save(it) }
 
-// ✅ CORRECTO - Structured concurrency
+// ✅ CORRECT - Structured concurrency
 suspend fun processWithTimeout(items: List<Item>) = coroutineScope {
     val deferred = items.map { item ->
         async {
@@ -86,31 +86,31 @@ suspend fun processWithTimeout(items: List<Item>) = coroutineScope {
 ## 2. Lazy Initialization
 
 ```kotlin
-// ✅ CORRECTO - Delegado lazy
+// ✅ CORRECT - Lazy delegate
 class DatabaseConnection {
-    // Se inicializa solo la primera vez que se accede
+    // Only initializes first time accessed
     val connection: Connection by lazy {
-        println("Creando conexión...")
+        println("Creating connection...")
         createExpensiveConnection()
     }
 
-    // Lazy thread-safe (por defecto)
+    // Lazy thread-safe (default)
     val cache: Cache by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         Cache()
     }
 }
 
-// ✅ CORRECTO - Lazy en propiedades de clase
+// ✅ CORRECT - Lazy in class properties
 class ConfigLoader {
-    // No carga hasta que se necesite
+    // Doesn't load until needed
     val config: Config by lazy { loadFromDisk() }
 
     fun getSetting(key: String): String? {
-        return config[key] // Primera llamada carga el config
+        return config[key] // First call loads config
     }
 }
 
-// ✅ CORRECTO - Lateinit para inyección
+// ✅ CORRECT - Lateinit for injection
 class UserService {
     lateinit var repository: UserRepository
 
@@ -130,39 +130,39 @@ class UserService {
 ## 3. Inline Functions
 
 ```kotlin
-// ❌ INEFICIENTE - Lambda crea objeto anónimo
+// ❌ INEFFICIENT - Lambda creates anonymous object
 fun measureTime(block: () -> Unit): Long {
     val start = System.currentTimeMillis()
     block()
     return System.currentTimeMillis() - start
 }
 
-// Cada llamada crea: object : Function0<Unit> { ... }
+// Each call creates: object : Function0<Unit> { ... }
 measureTime { doSomething() }
 
-// ✅ CORRECTO - inline elimina overhead de lambda
+// ✅ CORRECT - inline eliminates lambda overhead
 inline fun measureTime(block: () -> Unit): Long {
     val start = System.currentTimeMillis()
     block()
     return System.currentTimeMillis() - start
 }
 
-// El compilador in-linea el cuerpo, sin objeto lambda
+// Compiler inlines body, no lambda object
 measureTime { doSomething() }
-// Compila a:
+// Compiles to:
 // val start = System.currentTimeMillis()
 // doSomething()
 // val result = System.currentTimeMillis() - start
 
-// ✅ CORRECTO - inline con reified type parameters
+// ✅ CORRECT - inline with reified type parameters
 inline fun <reified T> Gson.fromJson(json: String): T {
     return fromJson(json, T::class.java)
 }
 
-// Uso sin Class<T>
+// Usage without Class<T>
 val user: User = gson.fromJson(jsonString)
 
-// ✅ CORRECTO - inline para higher-order functions
+// ✅ CORRECT - inline for higher-order functions
 inline fun <T> T.applyIf(condition: Boolean, block: T.() -> Unit): T {
     if (condition) block()
     return this
@@ -174,33 +174,33 @@ inline fun <T> T.applyIf(condition: Boolean, block: T.() -> Unit): T {
 ## 4. Sequence vs Collection
 
 ```kotlin
-// ❌ INEFICIENTE - Múltiples colecciones intermedias
+// ❌ INEFFICIENT - Multiple intermediate collections
 fun processLargeList(numbers: List<Int>): List<Int> {
     return numbers
-        .map { it * 2 }        // Nueva lista
-        .filter { it > 10 }    // Nueva lista
-        .take(10)              // Nueva lista
+        .map { it * 2 }        // New list
+        .filter { it > 10 }    // New list
+        .take(10)              // New list
 }
 
-// ✅ CORRECTO - Sequence para lazy evaluation
+// ✅ CORRECT - Sequence for lazy evaluation
 fun processLargeList(numbers: List<Int>): List<Int> {
     return numbers
         .asSequence()
         .map { it * 2 }
         .filter { it > 10 }
         .take(10)
-        .toList() // Solo una lista final
+        .toList() // Only one final list
 }
 
-// ✅ CORRECTO - generateSequence para secuencias infinitas
+// ✅ CORRECT - generateSequence for infinite sequences
 val fibonacci = generateSequence(Pair(0, 1)) { (a, b) ->
     Pair(b, a + b)
 }.map { it.first }
 
-// Tomar solo los primeros 10
+// Take only first 10
 val first10 = fibonacci.take(10).toList()
 
-// ✅ CORRECTO - sequence builder para casos complejos
+// ✅ CORRECT - sequence builder for complex cases
 fun fetchPaginated(): Sequence<Data> = sequence {
     var page = 0
     do {
@@ -209,7 +209,7 @@ fun fetchPaginated(): Sequence<Data> = sequence {
     } while (response.hasMore)
 }
 
-// Usar sin cargar todo en memoria
+// Use without loading everything in memory
 fetchPaginated()
     .filter { it.isValid }
     .take(100)
@@ -221,67 +221,67 @@ fetchPaginated()
 ## 5. JVM Tuning (GC, Heap)
 
 ```kotlin
-// ✅ CORRECTO - Anotaciones para optimización JVM
+// ✅ CORRECT - Annotations for JVM optimization
 
-// Evitar boxing en arrays primitivos
-val numbers: IntArray = intArrayOf(1, 2, 3) // int[] en JVM
+// Avoid boxing in primitive arrays
+val numbers: IntArray = intArrayOf(1, 2, 3) // int[] in JVM
 // vs
 val boxed: Array<Int> = arrayOf(1, 2, 3) // Integer[]
 
-// ✅ CORRECTO - JvmOverloads para menos código
+// ✅ CORRECT - JvmOverloads for less code
 @JvmOverloads
 fun greet(name: String, greeting: String = "Hello") {
     println("$greeting, $name!")
 }
-// Genera:
+// Generates:
 // greet(String name, String greeting)
 // greet(String name)
 
-// ✅ CORRECTO - JvmStatic para acceso estático eficiente
+// ✅ CORRECT - JvmStatic for efficient static access
 object Config {
     @JvmStatic
     fun getValue(key: String): String = //...
 }
 
-// ✅ CORRECTO - JvmInline para value classes
+// ✅ CORRECT - JvmInline for value classes
 @JvmInline
 value class UserId(val value: String)
 
-// En tiempo de ejecución es solo String, no objeto wrapper
+// At runtime it's just String, no wrapper object
 fun findUser(id: UserId): User
 
-// ✅ CORRECTO - const para compile-time constants
-const val MAX_RETRIES = 3 // Inline en bytecode
+// ✅ CORRECT - const for compile-time constants
+const val MAX_RETRIES = 3 // Inline in bytecode
 // vs
-val maxRetries = 3 // Property con getter
+val maxRetries = 3 // Property with getter
 ```
 
 ---
 
-## 6. Flow para Streams Reactivos
+## 6. Flow for Reactive Streams
 
 ```kotlin
 import kotlinx.coroutines.flow.*
 
-// ✅ CORRECTO - Flow para streams de datos
+// ✅ CORRECT - Flow for data streams
 class UserRepository {
     fun getUsersFlow(): Flow<User> = flow {
-        // Emitir uno por uno
+        // Emit one by one
         database.getUsers().forEach { user ->
             emit(user)
         }
     }
 }
 
-// ✅ CORRECTO - Operadores de Flow
+// ✅ CORRECT - Flow operators
 userRepository.getUsersFlow()
     .filter { it.isActive }
     .map { it.toDto() }
-    .buffer(100) // Buffer entre productor y consumidor
-    .conflate() // Saltar elementos si el consumidor es lento
+    .buffer(100) // Buffer between producer and consumer
+    .conflate() // Skip elements if consumer is slow
     .collect { display(it) }
 
-// ✅ CORRECTO - StateFlow para estado compartido
+// ✅ CORRECT - StateFlow for shared state
 class ViewModel {
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -291,7 +291,7 @@ class ViewModel {
     }
 }
 
-// ✅ CORRECTO - SharedFlow para eventos
+// ✅ CORRECT - SharedFlow for events
 class EventBus {
     private val _events = MutableSharedFlow<Event>(
         extraBufferCapacity = 10,
@@ -304,7 +304,7 @@ class EventBus {
     }
 }
 
-// ✅ CORRECTO - combine para múltiples flows
+// ✅ CORRECT - combine for multiple flows
 combine(
     userFlow,
     settingsFlow,
@@ -319,9 +319,9 @@ combine(
 ## 7. Android: ViewHolder, RecyclerView Optimization
 
 ```kotlin
-// ✅ CORRECTO - ViewHolder pattern
+// ✅ CORRECT - ViewHolder pattern
 class MyAdapter : RecyclerView.Adapter<MyAdapter.ViewHolder>() {
-    // ViewHolder reutiliza views
+    // ViewHolder reuses views
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val nameText: TextView = itemView.findViewById(R.id.name)
         val imageView: ImageView = itemView.findViewById(R.id.image)
@@ -336,12 +336,12 @@ class MyAdapter : RecyclerView.Adapter<MyAdapter.ViewHolder>() {
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
         holder.nameText.text = item.name
-        // Cargar imagen con Glide/Picasso (con caching)
+        // Load image with Glide/Picasso (with caching)
         Glide.with(holder.itemView).load(item.imageUrl).into(holder.imageView)
     }
 }
 
-// ✅ CORRECTO - ListAdapter para diffing eficiente
+// ✅ CORRECT - ListAdapter for efficient diffing
 class UserAdapter : ListAdapter<User, UserAdapter.ViewHolder>(
     DiffCallback()
 ) {
@@ -352,10 +352,10 @@ class UserAdapter : ListAdapter<User, UserAdapter.ViewHolder>(
         override fun areContentsTheSame(old: User, new: User) =
             old == new
     }
-    // ListAdapter calcula diff en background y anima cambios
+    // ListAdapter calculates diff in background and animates changes
 }
 
-// ✅ CORRECTO - ViewBinding para acceso eficiente
+// ✅ CORRECT - ViewBinding for efficient access
 class ViewHolder(binding: ItemLayoutBinding) :
     RecyclerView.ViewHolder(binding.root) {
 
@@ -365,7 +365,7 @@ class ViewHolder(binding: ItemLayoutBinding) :
     }
 }
 
-// ✅ CORRECTO - RecyclerView.RecycledViewPool para múltiples RVs
+// ✅ CORRECT - RecyclerView.RecycledViewPool for multiple RVs
 val pool = RecyclerView.RecycledViewPool()
 recyclerView1.setRecycledViewPool(pool)
 recyclerView2.setRecycledViewPool(pool)
@@ -373,46 +373,46 @@ recyclerView2.setRecycledViewPool(pool)
 
 ---
 
-## Checklist Kotlin Específico
+## Kotlin Specific Checklist
 
 ### Coroutines
-- [ ] async/await para paralelismo
-- [ ] Flow para streams de datos
-- [ ] Dispatchers apropiados (Default, IO, Main)
+- [ ] async/await for parallelism
+- [ ] Flow for data streams
+- [ ] Appropriate dispatchers (Default, IO, Main)
 - [ ] Structured concurrency
-- [ ] withTimeout para operaciones con límite
+- [ ] withTimeout for operations with limits
 
 ### Collections
-- [ ] Sequence para cadenas de operaciones
-- [ ] IntArray, LongArray en lugar de Array<Int>
-- [ ] generateSequence para secuencias infinitas
+- [ ] Sequence for operation chains
+- [ ] IntArray, LongArray instead of Array<Int>
+- [ ] generateSequence for infinite sequences
 
-### Optimización
-- [ ] inline para higher-order functions
-- [ ] lazy para inicialización diferida
-- [ ] const para compile-time constants
-- [ ] @JvmInline para value classes
+### Optimization
+- [ ] inline for higher-order functions
+- [ ] lazy for deferred initialization
+- [ ] const for compile-time constants
+- [ ] @JvmInline for value classes
 
 ### JVM
-- [ ] Configuración de heap apropiada
-- [ ] GC tuning según workload
-- [ ] Evitar boxing innecesario
+- [ ] Appropriate heap configuration
+- [ ] GC tuning according to workload
+- [ ] Avoid unnecessary boxing
 
 ### Android
-- [ ] ViewHolder para RecyclerView
-- [ ] ListAdapter con DiffUtil
-- [ ] ViewBinding en lugar de findViewById
-- [ ] RecycledViewPool compartido
-- [ ] Glide/Picasso con caching
+- [ ] ViewHolder for RecyclerView
+- [ ] ListAdapter with DiffUtil
+- [ ] ViewBinding instead of findViewById
+- [ ] Shared RecycledViewPool
+- [ ] Glide/Picasso with caching
 
-### Memoria
-- [ ] WeakReference para cachés
-- [ ] onCleared() en ViewModels
-- [ ] Cancelar coroutines en onDestroy
+### Memory
+- [ ] WeakReference for caches
+- [ ] onCleared() in ViewModels
+- [ ] Cancel coroutines in onDestroy
 
 ---
 
-## Referencias
+## References
 
 - [Kotlin Coroutines Guide](https://kotlinlang.org/docs/coroutines-guide.html)
 - [Kotlin Flow](https://kotlinlang.org/docs/flow.html)

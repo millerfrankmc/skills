@@ -1,113 +1,113 @@
-# Análisis de Complejidad
+# Complexity Analysis
 
-Guía para identificar y medir complejidad en código.
+Guide to identify and measure complexity in code.
 
-## Tipos de Complejidad
+## Types of Complexity
 
-### Complejidad Esencial vs Accidental
+### Essential vs Accidental Complexity
 
-| Tipo | Descripción | Ejemplo |
+| Type | Description | Example |
 |------|-------------|---------|
-| **Esencial** | Inherente al problema | Validar una transacción bancaria |
-| **Accidental** | Creada por nosotros | Framework de validación custom |
+| **Essential** | Inherent to the problem | Validate a bank transaction |
+| **Accidental** | Created by us | Custom validation framework |
 
-**Objetivo**: Reducir complejidad accidental, no esencial.
+**Goal:** Reduce accidental complexity, not essential.
 
-## Métricas de Complejidad
+## Complexity Metrics
 
-### 1. Complejidad Ciclomática
+### 1. Cyclomatic Complexity
 
-Mide el número de caminos independientes a través del código.
+Measures the number of independent paths through code.
 
 ```
-Complejidad = 1 + (número de decisiones)
+Complexity = 1 + (number of decisions)
 ```
 
-**Decisiones**: if, else, elif, for, while, and, or, try, except
+**Decisions**: if, else, elif, for, while, and, or, try, except
 
-| Valor | Interpretación |
+| Value | Interpretation |
 |-------|----------------|
 | 1-5 | Simple |
-| 6-10 | Moderado |
-| 11-20 | Complejo |
-| 20+ | Muy complejo, refactorizar |
+| 6-10 | Moderate |
+| 11-20 | Complex |
+| 20+ | Very complex, refactor |
 
-### 2. Acoplamiento
+### 2. Coupling
 
-Grado de dependencia entre módulos.
+Degree of dependency between modules.
 
-**Señales de alto acoplamiento**:
-- Cambiar un módulo rompe otro
-- Imports circulares
-- Muchos parámetros entre funciones
-- Tests que fallan por cambios en otros módulos
+**Signs of high coupling**:
+- Changing one module breaks another
+- Circular imports
+- Many parameters between functions
+- Tests that fail due to changes in other modules
 
-### 3. Cohesión
+### 3. Cohesion
 
-Grado en que elementos de un módulo pertenecen juntos.
+Degree to which elements of a module belong together.
 
-| Nivel | Descripción |
+| Level | Description |
 |-------|-------------|
-| **Alta** | Todo en el módulo contribuye a una responsabilidad |
-| **Media** | Algunas cosas relacionadas, algunas no |
-| **Baja** | Elementos sin relación clara |
+| **High** | Everything in the module contributes to one responsibility |
+| **Medium** | Some things related, some not |
+| **Low** | Elements without clear relation |
 
-**Objetivo**: Alta cohesión, bajo acoplamiento.
+**Goal:** High cohesion, low coupling.
 
-## Indicadores de Over-Engineering
+## Over-Engineering Indicators
 
-### Nivel 1: Sospechoso
-- Interface con 1 implementación
-- Clase abstracta con 1 subclase
-- Factory que siempre devuelve la misma clase
-- Configuración para 1 caso
+### Level 1: Suspicious
+- Interface with 1 implementation
+- Abstract class with 1 subclass
+- Factory that always returns the same class
+- Configuration for 1 case
 
-### Nivel 2: Probable
-- Builder para 2-3 parámetros
-- Strategy pattern con 1 estrategia
-- Observer con 1 suscriptor
-- Plugin system sin plugins
+### Level 2: Probable
+- Builder for 2-3 parameters
+- Strategy pattern with 1 strategy
+- Observer with 1 subscriber
+- Plugin system without plugins
 
-### Nivel 3: Definitivo
-- "Por si en el futuro..."
-- "Para que sea más flexible..."
-- "Para seguir el patrón..."
-- Código que nunca se ejecuta en producción
+### Level 3: Definitive
+- "Just in case in the future..."
+- "To make it more flexible..."
+- "To follow the pattern..."
+- Code that never runs in production
 
-## Herramientas de Análisis
+## Analysis Tools
 
 ### Python
 ```bash
-# Complejidad ciclomática
-radon cc archivo.py -a
+# Cyclomatic complexity
+radon cc file.py -a
 
-# Puntos calientes de complejidad
-radon cc archivo.py -a -s
+# Complexity hotspots
+radon cc file.py -a -s
 
-# Métricas raw
-radon raw archivo.py
+# Raw metrics
+radon raw file.py
 ```
 
 ### JavaScript/TypeScript
 ```bash
-# ESLint con reglas de complejidad
-eslint --rule 'complexity: ["error", 10]' archivo.js
+# ESLint with complexity rules
+eslint --rule 'complexity: ["error", 10]' file.js
 
-# Análisis con SonarJS
+# Analysis with SonarJS
 npx sonarjs
 ```
 
 ### Go
 ```bash
-# Complejidad ciclomática
-gocyclo archivo.go
+# Cyclomatic complexity
+gocyclo file.go
 
-# Líneas por función
-gofmt -s archivo.go | gofmt -d
+# Lines per function
+gofmt -s file.go | gofmt -d
 ```
 
 ### Kotlin
 ```bash
-# Detekt para análisis
-detekt-cli --input archivo.kt
+# Detekt for analysis
+detekt-cli --input file.kt
 ```

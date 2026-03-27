@@ -1,14 +1,14 @@
-# Ejemplos Python
+# Python Examples
 
 ## Anti-Clever Code
 
-**MAL**:
+**BAD**:
 ```python
 validate = lambda x: x and len(x) > 3 and x[0].isupper() or False
 result = [x for x in data if validate(x)] or ["default"]
 ```
 
-**BIEN**:
+**GOOD**:
 ```python
 def is_valid_name(name: str) -> bool:
     if not name:
@@ -24,9 +24,9 @@ def filter_valid_names(names: list[str]) -> list[str]:
 
 ---
 
-## YAGNI - Eliminar Abstracción Innecesaria
+## YAGNI - Remove Unnecessary Abstraction
 
-**MAL** (sobre-ingeniería):
+**BAD** (over-engineering):
 ```python
 from abc import ABC, abstractmethod
 
@@ -39,7 +39,7 @@ class UserDataProcessor(DataProcessor):
         return {"name": data.get("name", "").upper()}
 ```
 
-**BIEN** (YAGNI):
+**GOOD** (YAGNI):
 ```python
 def process_user(data: dict) -> dict:
     return {"name": data.get("name", "").upper()}
@@ -49,7 +49,7 @@ def process_user(data: dict) -> dict:
 
 ## KISS - Guard Clauses
 
-**MAL** (anidado):
+**BAD** (nested):
 ```python
 def process_user(user):
     if user:
@@ -60,7 +60,7 @@ def process_user(user):
     return None
 ```
 
-**BIEN** (plano):
+**GOOD** (flat):
 ```python
 def process_user(user):
     if not user: return None
@@ -72,19 +72,19 @@ def process_user(user):
 
 ---
 
-## DRY - Centralizar
+## DRY - Centralize
 
-**MAL** (duplicado):
+**BAD** (duplicated):
 ```python
 def validate_email(email: str) -> bool:
     return "@" in email and "." in email
 
 def validate_user_email(user: dict) -> bool:
     email = user.get("email", "")
-    return "@" in email and "." in email  # Duplicado
+    return "@" in email and "." in email  # Duplicated
 ```
 
-**BIEN** (DRY):
+**GOOD** (DRY):
 ```python
 def is_valid_email(email: str) -> bool:
     return "@" in email and "." in email
@@ -95,9 +95,9 @@ def validate_user_email(user: dict) -> bool:
 
 ---
 
-## Comentarios - QUÉ vs POR QUÉ
+## Comments - WHAT vs WHY
 
-**MAL** (comentario QUÉ):
+**BAD** (WHAT comment):
 ```python
 # Increment i by 1
 i = i + 1
@@ -109,13 +109,13 @@ for user in users:
         process(user)
 ```
 
-**BIEN** (código limpio o POR QUÉ):
+**GOOD** (clean code or WHY):
 ```python
 i += 1
 
 for user in active_users:
     process(user)
 
-# Timeout 30s porque el servicio externo tiene p95 de 25s
+# Timeout 30s because external service has p95 of 25s
 timeout = 30
 ```

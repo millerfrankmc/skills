@@ -1,31 +1,31 @@
 # Case Studies
 
-Ejemplos reales de refactorización aplicando KISS, DRY, YAGNI y principios de Linus Torvalds.
+Real examples of refactoring applying KISS, DRY, YAGNI and Linus Torvalds principles.
 
 ---
 
-## Case Study 1: Refactoring de Servicio de Pagos
+## Case Study 1: Payment Service Refactoring
 
-**Problema**: Servicio de 500+ líneas con múltiples responsabilidades y parámetros excesivos.
+**Problem**: 500+ line service with multiple responsibilities and excessive parameters.
 
-### Antes (Código Real)
+### Before (Real Code)
 
 ```python
 class PaymentService:
     def process_payment(self, user_id, amount, card_number, cvv, expiry,
                        currency, merchant_id, callback_url, metadata,
                        retry_count, timeout, log_level):
-        # Validación de usuario (15 líneas)
+        # User validation (15 lines)
         if user_id and len(user_id) > 0:
             user = self.db.get_user(user_id)
             if user and user.is_active:
-                # Validación de tarjeta (20 líneas)
+                # Card validation (20 lines)
                 if card_number and len(card_number) == 16:
                     if cvv and len(cvv) == 3:
                         if expiry and len(expiry) == 5:
-                            # Validación de monto (10 líneas)
+                            # Amount validation (10 lines)
                             if amount and amount > 0:
-                                # Cálculo de fees (25 líneas)
+                                # Fee calculation (25 lines)
                                 fee_percentage = 0.029
                                 if merchant_id in self.special_merchants:
                                     fee_percentage = 0.025
@@ -33,7 +33,7 @@ class PaymentService:
                                 total_fee = (amount * fee_percentage) + fixed_fee
                                 final_amount = amount - total_fee
 
-                                # Llamada a gateway (30 líneas)
+                                # Gateway call (30 lines)
                                 gateway_response = self.gateway.charge(
                                     card_number=card_number,
                                     cvv=cvv,
@@ -42,14 +42,14 @@ class PaymentService:
                                     currency=currency or "USD"
                                 )
 
-                                # Logging (15 líneas)
+                                # Logging (15 lines)
                                 self.logger.log(f"Payment processed: {user_id}", level=log_level)
 
-                                # Notificaciones (20 líneas)
+                                # Notifications (20 lines)
                                 if callback_url:
                                     self.send_callback(callback_url, gateway_response)
 
-                                # Guardar en DB (15 líneas)
+                                # Save to DB (15 lines)
                                 transaction = self.db.save_transaction(
                                     user_id=user_id,
                                     amount=amount,
@@ -57,7 +57,7 @@ class PaymentService:
                                     status=gateway_response.status
                                 )
 
-                                # Retornar resultado
+                                # Return result
                                 return {
                                     "success": True,
                                     "transaction_id": transaction.id,
@@ -67,16 +67,16 @@ class PaymentService:
         return {"success": False}
 ```
 
-**Violaciones detectadas:**
-- [KISS] 13 parámetros (límite: 4)
-- [KISS] Función de 170+ líneas (límite: 20)
-- [KISS] 5 niveles de anidamiento (límite: 2)
-- [KISS] Función hace 6 cosas: valida, calcula, cobra, loguea, notifica, guarda
-- [DRY] Validación de tarjeta duplicada en otros métodos
-- [YAGNI] `callback_url`, `metadata`, `retry_count`, `timeout`, `log_level` nunca usados
-- [LINUS] Lógica escondida en anidamiento profundo
+**Violations detected:**
+- [KISS] 13 parameters (limit: 4)
+- [KISS] 170+ line function (limit: 20)
+- [KISS] 5 nesting levels (limit: 2)
+- [KISS] Function does 6 things: validates, calculates, charges, logs, notifies, saves
+- [DRY] Card validation duplicated in other methods
+- [YAGNI] `callback_url`, `metadata`, `retry_count`, `timeout`, `log_level` never used
+- [LINUS] Logic hidden in deep nesting
 
-### Después (Refactorizado)
+### After (Refactored)
 
 ```python
 from dataclasses import dataclass
@@ -139,31 +139,31 @@ class PaymentService:
         )
 ```
 
-### Métricas
+### Metrics
 
-| Aspecto | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| Líneas por función | 170 | 15-20 | 88% |
-| Parámetros | 13 | 1-2 | 90% |
-| Niveles de anidamiento | 5 | 1 | 80% |
-| Responsabilidades | 6 | 1 | 83% |
-| Testabilidad | Difícil | Fácil | Alta |
-| Cobertura de tests alcanzable | 40% | 95% | +55% |
+| Aspect | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Lines per function | 170 | 15-20 | 88% |
+| Parameters | 13 | 1-2 | 90% |
+| Nesting levels | 5 | 1 | 80% |
+| Responsibilities | 6 | 1 | 83% |
+| Testability | Difficult | Easy | High |
+| Achievable test coverage | 40% | 95% | +55% |
 
-### Lecciones Aprendidas
+### Lessons Learned
 
-1. **Guard clauses**: Cada validación retorna/raise inmediatamente, no anida
-2. **Parameter object**: `PaymentRequest` agrupa datos relacionados
-3. **Single Responsibility**: Cada método hace una cosa
-4. **YAGNI**: Eliminar parámetros no usados simplificó todo
+1. **Guard clauses**: Each validation returns/raises immediately, doesn't nest
+2. **Parameter object**: `PaymentRequest` groups related data
+3. **Single Responsibility**: Each method does one thing
+4. **YAGNI**: Removing unused parameters simplified everything
 
 ---
 
-## Case Study 2: Eliminación de Abstracción Innecesaria
+## Case Study 2: Removal of Unnecessary Abstraction
 
-**Problema**: Repository genérico con una sola implementación y 13 métodos, solo 2 usados.
+**Problem**: Generic repository with a single implementation and 13 methods, only 2 used.
 
-### Antes (Código Real)
+### Before (Real Code)
 
 ```typescript
 interface IRepository<T> {
@@ -204,7 +204,7 @@ class UserRepository implements IRepository<User> {
     return this.db.users.create({ data: user });
   }
 
-  // Los otros 11 métodos...
+  // The other 11 methods...
   async findAll(): Promise<User[]> { throw new Error("Not implemented"); }
   async findBy(): Promise<User[]> { throw new Error("Not implemented"); }
   async findOne(): Promise<User | null> { throw new Error("Not implemented"); }
@@ -219,14 +219,14 @@ class UserRepository implements IRepository<User> {
 }
 ```
 
-**Violaciones detectadas:**
-- [YAGNI] 11 métodos nunca usados (85% del código)
-- [YAGNI] Interface `Filter` y `PaginatedResult` no usados
-- [YAGNI] Generics complejos sin necesidad
-- [KISS] Abstracción innecesaria (1 implementación)
-- [LINUS] 200 líneas de "Not implemented"
+**Violations detected:**
+- [YAGNI] 11 methods never used (85% of code)
+- [YAGNI] `Filter` and `PaginatedResult` interfaces not used
+- [YAGNI] Complex generics without need
+- [KISS] Unnecessary abstraction (1 implementation)
+- [LINUS] 200 lines of "Not implemented"
 
-### Después (Refactorizado)
+### After (Refactored)
 
 ```typescript
 class UserRepository {
@@ -240,29 +240,29 @@ class UserRepository {
 }
 ```
 
-### Métricas
+### Metrics
 
-| Aspecto | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| Métodos | 13 | 2 | 85% |
-| Líneas de código | 200 | 15 | 93% |
-| Archivos | 1 | 1 | - |
+| Aspect | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Methods | 13 | 2 | 85% |
+| Lines of code | 200 | 15 | 93% |
+| Files | 1 | 1 | - |
 | Interfaces | 3 | 0 | 100% |
-| Complejidad cognitiva | Alta | Baja | Alta |
+| Cognitive complexity | High | Low | High |
 
-### Lecciones Aprendidas
+### Lessons Learned
 
-1. **Interface = Contrato**: Solo crear cuando hay 2+ implementaciones
-2. **Generalización prematura**: El costo de mantener 11 métodos sin usar > beneficio teórico
-3. **Simple es mantenible**: Si necesitamos más métodos, los agregamos
+1. **Interface = Contract**: Only create when there are 2+ implementations
+2. **Premature generalization**: The cost of maintaining 11 unused methods > theoretical benefit
+3. **Simple is maintainable**: If we need more methods, we add them
 
 ---
 
-## Case Study 3: Aplanamiento de Anidamiento Profundo
+## Case Study 3: Flattening Deep Nesting
 
-**Problema**: Lógica de procesamiento de órdenes con 7 niveles de anidamiento.
+**Problem**: Order processing logic with 7 levels of nesting.
 
-### Antes (Código Real)
+### Before (Real Code)
 
 ```go
 func ProcessOrder(order *Order) (*OrderResult, error) {
@@ -283,7 +283,7 @@ func ProcessOrder(order *Order) (*OrderResult, error) {
                                 if order.Payment.IsProcessed {
                                     if order.Payment.Amount >= order.Total {
                                         if order.ShippingAddress != nil && order.ShippingAddress.IsValid() {
-                                            // Finalmente procesar la orden
+                                            // Finally process the order
                                             result, err := fulfillOrder(order)
                                             if err != nil {
                                                 return nil, err
@@ -322,13 +322,13 @@ func ProcessOrder(order *Order) (*OrderResult, error) {
 }
 ```
 
-**Violaciones detectadas:**
-- [KISS] 7 niveles de anidamiento (límite: 2)
-- [KISS] Función de 50+ líneas (límite: 20)
-- [LINUS] Difícil de entender de un vistazo
-- [LINUS] Mensajes de error escondidos al final
+**Violations detected:**
+- [KISS] 7 nesting levels (limit: 2)
+- [KISS] 50+ line function (limit: 20)
+- [LINUS] Difficult to understand at a glance
+- [LINUS] Error messages hidden at the end
 
-### Después (Refactorizado)
+### After (Refactored)
 
 ```go
 func ProcessOrder(order *Order) (*OrderResult, error) {
@@ -376,33 +376,33 @@ func allItemsInStock(items []Item) bool {
 }
 ```
 
-### Métricas
+### Metrics
 
-| Aspecto | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| Niveles de anidamiento | 7 | 1 | 86% |
-| Líneas de código | 52 | 35 | 33% |
-| Legibilidad | Baja | Alta | Alta |
-| Tiempo para entender | 5+ min | 30 seg | 90% |
+| Aspect | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Nesting levels | 7 | 1 | 86% |
+| Lines of code | 52 | 35 | 33% |
+| Readability | Low | High | High |
+| Time to understand | 5+ min | 30 sec | 90% |
 
-### Lecciones Aprendidas
+### Lessons Learned
 
-1. **Guard clauses**: Validar y retornar error inmediatamente
-2. **Flujo lineal**: El código se lee de arriba a abajo
-3. **Mensajes específicos**: Cada error describe exactamente qué falló
-4. **Funciones pequeñas**: `allItemsInStock` extraída para claridad
+1. **Guard clauses**: Validate and return error immediately
+2. **Linear flow**: Code reads from top to bottom
+3. **Specific messages**: Each error describes exactly what failed
+4. **Small functions**: `allItemsInStock` extracted for clarity
 
 ---
 
-## Case Study 4: Eliminación de "Clever Code"
+## Case Study 4: Removal of "Clever Code"
 
-**Problema**: One-liners crípticos que son difíciles de entender y debuggear.
+**Problem**: Cryptic one-liners that are difficult to understand and debug.
 
-### Antes (Código Real)
+### Before (Real Code)
 
 ```python
 def calculate_discount(user, order, promo_code):
-    # ¿Qué hace esto? ¿Cuál es el descuento final?
+    # What does this do? What's the final discount?
     return (
         (order.total * 0.15 if user.is_premium else order.total * 0.05) +
         (10 if promo_code == "SAVE10" else 5 if promo_code else 0) +
@@ -410,13 +410,13 @@ def calculate_discount(user, order, promo_code):
     ) if order.is_valid and not order.is_discounted else 0
 ```
 
-**Violaciones detectadas:**
-- [LINUS] One-liner críptico
-- [KISS] Lógica compleja anidada
-- [LINUS] Difícil de entender de un vistazo
-- [KISS] Difícil de debuggear
+**Violations detected:**
+- [LINUS] Cryptic one-liner
+- [KISS] Complex nested logic
+- [LINUS] Difficult to understand at a glance
+- [KISS] Difficult to debug
 
-### Después (Refactorizado)
+### After (Refactored)
 
 ```python
 def calculate_discount(user, order, promo_code):
@@ -447,30 +447,30 @@ def calculate_volume_discount(total):
     return 0
 ```
 
-### Métricas
+### Metrics
 
-| Aspecto | Antes | Después | Mejora |
-|---------|-------|---------|--------|
-| Líneas | 1 | 22 | +21 |
-| Claridad | Baja | Alta | Alta |
-| Debuggeable | No | Sí | Total |
-| Testeable | Difícil | Fácil | Alta |
+| Aspect | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Lines | 1 | 22 | +21 |
+| Clarity | Low | High | High |
+| Debuggable | No | Yes | Total |
+| Testable | Difficult | Easy | High |
 
-### Lecciones Aprendidas
+### Lessons Learned
 
-1. **Claro > Corto**: 22 líneas claras > 1 línea críptica
-2. **Nombrar operaciones**: Cada función describe qué calcula
-3. **Fácil de debuggear**: Puedes poner breakpoint en cada paso
-4. **Fácil de testear**: Cada función se testea independientemente
+1. **Clear > Short**: 22 clear lines > 1 cryptic line
+2. **Name operations**: Each function describes what it calculates
+3. **Easy to debug**: You can put breakpoint at each step
+4. **Easy to test**: Each function is tested independently
 
 ---
 
-## Patrones Recurrentes
+## Recurring Patterns
 
-De estos case studies, emergen patrones comunes:
+From these case studies, common patterns emerge:
 
-1. **Guard clauses**: Eliminar anidamiento profundo
-2. **Funciones pequeñas**: 20 líneas máximo
-3. **Nombres descriptivos**: El código se explica solo
-4. **YAGNI**: Eliminar antes de simplificar
-5. **Una responsabilidad**: Cada función/clase hace una cosa
+1. **Guard clauses**: Eliminate deep nesting
+2. **Small functions**: 20 lines maximum
+3. **Descriptive names**: Code explains itself
+4. **YAGNI**: Remove before simplifying
+5. **Single responsibility**: Each function/class does one thing

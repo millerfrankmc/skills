@@ -1,37 +1,37 @@
-# Principios de Linus Torvalds
+# Linus Torvalds Principles
 
-## Código sobre Explicaciones
+## Code over Explanations
 
-- Código que se explica solo > código comentado
-- Comentarios solo para el **POR QUÉ**, nunca para el QUÉ
-- Si necesitas explicar qué hace → el código está mal
+- Self-explanatory code > commented code
+- Comments only for the **WHY**, never for the WHAT
+- If you need to explain what it does -> the code is wrong
 
 ## Anti-Clever Code
 
-| Malo | Bueno |
-|------|-------|
-| One-liner cryptico | Código expandido legible |
-| "Mira qué corto" | Warning sign |
-| Elegante | Obvio |
+| Bad | Good |
+|-----|------|
+| Cryptic one-liner | Expanded readable code |
+| "Look how short" | Warning sign |
+| Elegant | Obvious |
 
-**Regla**: El próximo desarrollador (tú en 6 meses) debe entenderlo de un vistazo.
+**Rule**: The next developer (you in 6 months) must understand it at a glance.
 
-## Simplicidad Brutal
+## Brutal Simplicity
 
-- Dos formas → la más simple, SIEMPRE
-- No optimizar hasta que duela
-- "Enterprise thinking" → prohibido
-- Framework/abstracción → solo si el dolor es real y actual
+- Two ways -> the simplest one, ALWAYS
+- Don't optimize until it hurts
+- "Enterprise thinking" -> forbidden
+- Framework/abstraction -> only if the pain is real and current
 
-## Pragmatismo sobre Perfección
+## Pragmatism over Perfection
 
-- Funciona hoy > perfecto mañana
-- Iterar > diseñar en exceso
-- Eliminar código > agregar código
-- El mejor código es el que no existe
+- Works today > perfect tomorrow
+- Iterate > over-design
+- Delete code > add code
+- The best code is the one that doesn't exist
 
-## Calidad por Revisión
+## Quality through Review
 
-- Código que otros pueden revisar fácilmente
-- Funciones cortas, una cosa bien
-- Estructura plana > estructura profunda
+- Code that others can review easily
+- Short functions, one thing well
+- Flat structure > deep structure

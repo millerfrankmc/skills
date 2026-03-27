@@ -2,84 +2,127 @@
 
 [![Skills](https://skills.sh/badge.svg)](https://skills.sh)
 
-> **Skill de refactorización de código** aplicando principios de simplicidad: KISS (Keep It Simple, Stupid), DRY (Don't Repeat Yourself), YAGNI (You Ain't Gonna Need It) y la filosofía de Linus Torvalds.
+> **Code refactoring skill** applying simplicity principles: KISS (Keep It Simple, Stupid), DRY (Don't Repeat Yourself), YAGNI (You Ain't Gonna Need It) and the philosophy of Linus Torvalds.
 
-## Instalación
+## Installation
 
 ```bash
 npx skills add millerfrankmc/skills/linus-kiss-dry-yagni
 ```
 
-Soportado en: Claude Code, Cursor, Codex, OpenCode, y [más agentes](https://skills.sh).
+Supported on: Claude Code, Cursor, Codex, OpenCode, and [more agents](https://skills.sh).
 
 ---
 
-## Qué hace esta skill
+## What this skill does
 
-Esta skill transforma código complejo y sobre-ingenierizado en código simple, directo y mantenible.
+This skill transforms complex and over-engineered code into simple, direct, and maintainable code.
 
-### Problemas que resuelve
+### Problems it solves
 
-| Problema | Solución |
+| Problem | Solution |
 |----------|----------|
-| Funciones de 100+ líneas | Dividir en funciones ≤20 líneas (≤50 para seguridad) |
-| Anidamiento de 6+ niveles | Guard clauses planas |
-| 10+ parámetros en funciones | Objeto/struct config |
-| Interfaces con 1 implementación | Eliminar abstracción innecesaria (excepto seguridad) |
-| Código duplicado | Extraer función común |
-| Fábricas de fábricas | Simplificar a funciones directas |
-| Código "por si acaso" | Eliminar (YAGNI) - excepto defensa en profundidad |
-| Over-engineering de seguridad | **Preservar** validaciones, headers, cifrado |
+| Functions with 100+ lines | Split into functions ≤20 lines (≤50 for security) |
+| Nesting of 6+ levels | Flat guard clauses |
+| 10+ parameters in functions | Config object/struct |
+| Interfaces with 1 implementation | Remove unnecessary abstraction (except security) |
+| Duplicate code | Extract common function |
+| Factories of factories | Simplify to direct functions |
+| "Just in case" code | Remove (YAGNI) - except defense in depth |
+| Security over-engineering | **Preserve** validations, headers, encryption |
 
-### 🔒 Seguridad Integrada
+### 🔒 Integrated Security
 
-Esta skill **no sacrifica seguridad por simplicidad**:
+This skill **does not sacrifice security for simplicity**:
 
-- ✅ Preserva validaciones de entrada (múltiples capas)
-- ✅ Mantiene SQL parametrizado (nunca convierte a interpolación)
-- ✅ Conserva headers de seguridad HTTP
-- ✅ Respeta funciones de seguridad (bcrypt, JWT, CSRF)
-- ✅ Mantiene comentarios críticos (`// SECURITY:`, `// NUNCA`)
-- ✅ No aplica DRY a validaciones con diferentes threat models
+- ✅ Preserves input validations (multiple layers)
+- ✅ Keeps SQL parameterized (never converts to interpolation)
+- ✅ Preserves HTTP security headers
+- ✅ Respects security functions (bcrypt, JWT, CSRF)
+- ✅ Keeps critical comments (`// SECURITY:`, `// NEVER`)
+- ✅ Does not apply DRY to validations with different threat models
 
-> **"La simplicidad nunca debe sacrificar la seguridad."**
+> **"Simplicity must never sacrifice security."**
 
-### Resultados medidos
+### Measured Results
 
-En pruebas A/B contra baseline sin skill:
+In A/B tests against baseline without skill:
 
-| Métrica | Mejora |
+| Metric | Improvement |
 |---------|--------|
 | Pass rate | **+43%** (100% vs 57%) |
-| Líneas de código | **-42%** (más simple) |
-| Tiempo de refactorización | **-9.6%** |
+| Lines of code | **-42%** (simpler) |
+| Refactoring time | **-9.6%** |
 
-### 🔐 Benchmark de Seguridad
+### 🔐 Security Benchmark
 
-8 evaluaciones exhaustivas verifican que la skill **preserva protecciones críticas**:
+8 exhaustive evaluations verify that the skill **preserves critical protections**:
 
-| Categoría | Evaluaciones | Pass Rate |
+| Category | Evaluations | Pass Rate |
 |-----------|--------------|-----------|
-| Simplificación correcta | God Function, JWT Validation | 100% ✅ |
-| Preservación de seguridad | Auth, SQL Injection, Input Validation | 100% ✅ |
-| Inteligencia contextual | DRY vs Context, Headers, Comments | 100% ✅ |
-| **Total verificaciones de seguridad** | **40/40** | **100%** |
+| Correct simplification | God Function, JWT Validation | 100% ✅ |
+| Security preservation | Auth, SQL Injection, Input Validation | 100% ✅ |
+| Contextual intelligence | DRY vs Context, Headers, Comments | 100% ✅ |
+| **Total security verifications** | **40/40** | **100%** |
 
-> Ver `/skill-creator-workspace/benchmark-results.md` para detalles completos.
+> See `/skill-creator-workspace/benchmark-results.md` for full details.
 
 ---
 
-## Uso
+### 🚀 Performance Optimization
 
-Una vez instalada, la skill se activa automáticamente cuando:
+The skill includes language-specific performance guides:
 
-- Pides "refactorizar código"
-- Pides "simplificar código"
-- Pides "limpiar código"
-- Pides "revisar código"
-- Se detecta código con múltiples problemas obvios
+| Language | Optimizations Covered |
+|----------|-------------------------|
+| **Python** | N+1 queries, list comprehensions, generators, asyncio |
+| **TypeScript** | Memoization, lazy loading, bundle size, rendering |
+| **Go** | Goroutines, buffers, allocations, profiling |
+| **Kotlin** | Coroutines, lazy collections, flows, null-safety |
+| **Rust** | Ownership, zero-copy, iterators, SIMD |
 
-### Ejemplo de uso
+**Example - N+1 Queries (Python):**
+
+```python
+# BEFORE - N+1 problem
+for user in users:
+    orders = db.query(Order).filter_by(user_id=user.id).all()  # N queries
+
+# AFTER - Single query
+users_with_orders = db.query(User).options(joinedload(User.orders)).all()
+```
+
+See files in `/resources/performance/` for each language.
+
+---
+
+### 📚 Real Security Cases
+
+The skill documents real vulnerabilities found in refactorings:
+
+| Case | Vulnerability | Prevention |
+|------|----------------|------------|
+| **JWT Validation** | Removal of signature verification | Preserve complete validation |
+| **SQL Injection** | Conversion to string interpolation | Maintain parameterization |
+| **Password Hashing** | Reduction of bcrypt rounds | Preserve cost factor |
+| **Input Validation** | Removal of "redundant" validations | Multiple layers of defense |
+| **Security Headers** | Simplification of HTTP headers | Preserve all headers |
+
+See `/resources/security/real-cases.md` for complete analysis.
+
+---
+
+## Usage
+
+Once installed, the skill activates automatically when:
+
+- You ask to "refactor code"
+- You ask to "simplify code"
+- You ask to "clean up code"
+- You ask to "review code"
+- Code with multiple obvious problems is detected
+
+### Usage Example
 
 **Input:**
 ```python
@@ -90,10 +133,10 @@ def process_user(user_id, user_name, user_email, user_phone, user_address,
             if user_email:
                 if '@' in user_email and '.' in user_email:
                     if is_active:
-                        # ... 50 líneas más de anidamiento
+                        # ... 50 more lines of nesting
 ```
 
-**Output (automático):**
+**Output (automatic):**
 ```python
 def process_user(user: User) -> Optional[dict]:
     if not user.id: return None
@@ -107,149 +150,161 @@ def process_user(user: User) -> Optional[dict]:
 
 ---
 
-## Principios Aplicados
+## Applied Principles
 
 ### KISS - Keep It Simple, Stupid
-- Funciones pequeñas con una sola responsabilidad
-- Código que se lee de arriba a abajo
-- Sin clever code (one-liners crípticos)
+- Small functions with single responsibility
+- Code that reads from top to bottom
+- No clever code (cryptic one-liners)
 
 ### DRY - Don't Repeat Yourself
-- Extraer código duplicado
-- Centralizar validaciones
-- Un cambio en un solo lugar
+- Extract duplicate code
+- Centralize validations
+- One change in one place
 
 ### YAGNI - You Ain't Gonna Need It
-- Eliminar código "por si acaso" (excepto defensa en profundidad de seguridad)
-- Sin abstracciones prematuras
-- Sin interfaces con una sola implementación (excepto auth/crypto)
+- Remove "just in case" code (except defense in depth security)
+- No premature abstractions
+- No interfaces with single implementation (except auth/crypto)
 
-### Filosofía Linus Torvalds
+### Linus Torvalds Philosophy
 > "The way to write clean code is to not write clever code."
 
-- Guard clauses con returns tempranos
-- Mensajes de error específicos
-- Código obvio sobre código elegante
+- Guard clauses with early returns
+- Specific error messages
+- Obvious code over elegant code
 
 ---
 
-## Límites Concretos (No Negociables)
+## Concrete Limits (Non-Negotiable)
 
-| Elemento | Límite | Acción si se excede |
+| Element | Limit | Action if exceeded |
 |----------|--------|---------------------|
-| **Líneas por función** | 20 (50 para seguridad) | Dividir en funciones más pequeñas |
-| **Parámetros por función** | 4 | Usar objeto/struct |
-| **Niveles de anidamiento** | 2 | Usar guard clauses |
-| **Duplicación de código** | 0 | Extraer función común |
-| **Interfaces sin uso** | 0 | Eliminar hasta necesitar |
+| **Lines per function** | 20 (50 for security) | Split into smaller functions |
+| **Parameters per function** | 4 | Use object/struct |
+| **Nesting levels** | 2 | Use guard clauses |
+| **Code duplication** | 0 | Extract common function |
+| **Unused interfaces** | 0 | Eliminate until needed |
 
 ---
 
-## Recursos Incluidos
+## Included Resources
 
-- **Anti-patrones comunes** - Identificación y soluciones
-- **Protección de seguridad** - Guardias que preservan validaciones y controles de seguridad
-- **Ejemplos por lenguaje** - Python, TypeScript, Go, Kotlin, Rust
-- **Case studies** - Refactorizaciones reales
-- **Estrategias de simplificación** - Técnicas específicas
-- **Principios de Linus Torvalds** - Filosofía detrás del código simple
+- **Common anti-patterns** - Identification and solutions
+- **Security protection** - Guards that preserve validations and security controls
+- **Language-specific security** - Python, TypeScript, Go, Kotlin, Rust
+- **Language-specific performance** - Optimizations per language
+- **Real security cases** - Documented vulnerabilities and prevention
+- **Language examples** - Python, TypeScript, Go, Kotlin, Rust
+- **Case studies** - Real refactorings
+- **Simplification strategies** - Specific techniques
+- **Linus Torvalds principles** - Philosophy behind simple code
 
 ---
 
-## Anti-Patrones Detectados
+## Detected Anti-Patterns
 
-| Anti-Patrón | Señal de Alerta | Solución |
+| Anti-Pattern | Warning Sign | Solution |
 |-------------|-----------------|----------|
-| **Pyramid of Doom** | 3+ niveles de if/else | Guard clauses |
-| **God Function** | Función hace 3+ cosas | Dividir en funciones |
-| **Parameter Explosion** | 5+ parámetros | Objeto config |
-| **Interface Pollution** | Interface con 1 implementación | Usar clase directa |
-| **Abstraction Addiction** | Fábricas de fábricas | Funciones directas |
-| **Future Proofing** | Código "por si acaso" | Eliminar |
-| **Clever Code** | One-liners crípticos | Expandir a código claro |
+| **Pyramid of Doom** | 3+ levels of if/else | Guard clauses |
+| **God Function** | Function does 3+ things | Split into functions |
+| **Parameter Explosion** | 5+ parameters | Config object |
+| **Interface Pollution** | Interface with 1 implementation | Use direct class |
+| **Abstraction Addiction** | Factories of factories | Direct functions |
+| **Future Proofing** | "Just in case" code | Remove |
+| **Clever Code** | Cryptic one-liners | Expand to clear code |
 
 ---
 
-## Casos de Estudio
+## Case Studies
 
-### Caso 1: Función God (Python)
-- **Antes:** 80 líneas, valida, calcula, guarda, notifica
-- **Después:** 4 funciones de 15 líneas cada una
-- **Beneficio:** Testeable, reusable, mantenible
+### Case 1: God Function (Python)
+- **Before:** 80 lines, validates, calculates, saves, notifies
+- **After:** 4 functions of 15 lines each
+- **Benefit:** Testable, reusable, maintainable
 
-### Caso 2: Anidamiento Profundo (Go)
-- **Antes:** 7 niveles de if → imposible de seguir
-- **Después:** Guard clauses planas → flujo lineal
-- **Beneficio:** Legible de arriba a abajo
+### Case 2: Deep Nesting (Go)
+- **Before:** 7 levels of if → impossible to follow
+- **After:** Flat guard clauses → linear flow
+- **Benefit:** Readable from top to bottom
 
-### Caso 3: Sobre-ingeniería (TypeScript)
-- **Antes:** Interface + Factory + Strategy para 2 opciones
-- **Después:** If/else simple
-- **Beneficio:** 75% menos código, más claro
+### Case 3: Over-engineering (TypeScript)
+- **Before:** Interface + Factory + Strategy for 2 options
+- **After:** Simple if/else
+- **Benefit:** 75% less code, clearer
 
 ---
 
-## Estructura del Repositorio
+## Repository Structure
 
 ```
 .
 ├── LICENSE                     # MIT License
-├── README.md                   # Este archivo
-└── linus-kiss-dry-yagni/       # Skill principal
-    ├── SKILL.md                # Definición de la skill
+├── README.md                   # This file
+└── linus-kiss-dry-yagni/       # Main skill
+    ├── SKILL.md                # Skill definition
     ├── evals/
-    │   └── evals.json          # Casos de prueba A/B
+    │   └── evals.json          # A/B test cases
     └── resources/
-        ├── anti-patterns/      # Anti-patrones comunes
-        ├── cases/              # Casos de estudio
-        ├── decision/           # Frameworks de decisión
-        ├── design/             # Diseño guiado por KISS
-        ├── examples/           # Ejemplos por lenguaje
-        ├── principles/         # Principios fundamentales
-        └── strategies/         # Estrategias de simplificación
+        ├── anti-patterns/      # Common anti-patterns
+        ├── cases/              # Case studies
+        ├── decision/           # Decision frameworks
+        ├── design/             # KISS-driven design
+        ├── examples/           # Language examples
+        ├── performance/        # Language optimizations (Python, TS, Go, Kotlin, Rust)
+        ├── principles/         # Fundamental principles
+        ├── security/           # Language security + real cases
+        └── strategies/         # Simplification strategies
 ```
 
-> **Nota:** Este repositorio `skills` contiene múltiples skills. Cada skill está en su propia carpeta.
+> **Note:** This `skills` repository contains multiple skills. Each skill is in its own folder.
 
 ---
 
 ## Testing
 
-### A/B Testing - Simplificación
+### A/B Testing - Simplification
 
-- **5 casos de prueba** (Python, TypeScript, Go, Kotlin, Ruby)
-- **100% pass rate** con la skill vs 57% sin skill
-- **42% reducción** en líneas de código promedio
+- **5 test cases** (Python, TypeScript, Go, Kotlin, Ruby)
+- **100% pass rate** with the skill vs 57% without
+- **42% reduction** in average lines of code
 
-### Benchmark de Seguridad
+### Security Benchmark
 
-- **8 evaluaciones exhaustivas** verifican preservación de seguridad
-- **40 verificaciones de seguridad** - 100% pass rate
-- **0 simplificaciones inseguras** detectadas
+- **8 exhaustive evaluations** verify security preservation
+- **40 security verifications** - 100% pass rate
+- **0 unsafe simplifications** detected
+- **Flexible names**: Accepts private (`_is_valid`) and public functions
 
-Ver `/skill-creator-workspace/benchmark-results.md` para resultados detallados.
+### Performance Evaluations
 
----
+- **Language-specific optimizations**
+- **Prevention of N+1 queries**, memory leaks, unnecessary allocations
+- **Preservation of critical performance code**
 
-## Contribuir
-
-¿Encontraste un caso donde la skill no funciona bien? Abre un issue con:
-
-1. Código de entrada
-2. Lo que esperabas
-3. Lo que obtuviste
+See `/skill-creator-workspace/benchmark-results.md` for detailed results.
 
 ---
 
-## Licencia
+## Contributing
+
+Found a case where the skill doesn't work well? Open an issue with:
+
+1. Input code
+2. What you expected
+3. What you got
+
+---
+
+## License
 
 MIT
 
 ---
 
-## Inspiración
+## Inspiration
 
 > "Talk is cheap. Show me the code."
 > — Linus Torvalds
 
-Esta skill existe porque el código simple vence al código complejo. No más over-engineering. No más abstracciones innecesarias. Solo código que funciona y se puede mantener.
+This skill exists because simple code beats complex code. No more over-engineering. No more unnecessary abstractions. Just code that works and can be maintained.

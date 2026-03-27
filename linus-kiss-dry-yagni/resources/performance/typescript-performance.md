@@ -1,18 +1,18 @@
-# Rendimiento Específico - TypeScript/JavaScript
+# Performance Specific - TypeScript/JavaScript
 
-> Guía de optimizaciones de rendimiento para código TypeScript/JavaScript. NUNCA sacrificar rendimiento obvio por "código más limpio".
+> Guide for performance optimizations in TypeScript/JavaScript code. NEVER sacrifice obvious performance for "cleaner code".
 
 ---
 
-## 1. Event Loop y Async/Await
+## 1. Event Loop and Async/Await
 
-### El Problema
+### The Problem
 
 ```typescript
-// ❌ INEFICIENTE - Bloquear el event loop
+// ❌ INEFFICIENT - Blocking the event loop
 function calculateSync(data: number[]): number[] {
     return data.map(n => {
-        // Operación CPU-intensive bloquea todo el servidor
+        // CPU-intensive operation blocks entire server
         let result = 0;
         for (let i = 0; i < n; i++) {
             result += Math.sqrt(i);
@@ -21,18 +21,18 @@ function calculateSync(data: number[]): number[] {
     });
 }
 
-// ❌ INEFICIENTE - Microtask queue saturada
+// ❌ INEFFICIENT - Saturated microtask queue
 async function processAll(items: Item[]) {
     for (const item of items) {
-        await process(item); // Cada await genera microtask
+        await process(item); // Each await generates microtask
     }
 }
 ```
 
-### La Solución
+### The Solution
 
 ```typescript
-// ✅ CORRECTO - setImmediate para ceder el event loop
+// ✅ CORRECT - setImmediate to yield event loop
 function calculateNonBlocking(data: number[]): Promise<number[]> {
     return new Promise((resolve) => {
         const results: number[] = [];
@@ -41,12 +41,12 @@ function calculateNonBlocking(data: number[]): Promise<number[]> {
         function processChunk() {
             const chunk = 1000;
             for (let i = 0; i < chunk && index < data.length; i++, index++) {
-                // Procesar elemento
+                // Process element
                 results.push(heavyCalculation(data[index]));
             }
 
             if (index < data.length) {
-                setImmediate(processChunk); // Cedemos el event loop
+                setImmediate(processChunk); // Yield event loop
             } else {
                 resolve(results);
             }
@@ -56,7 +56,7 @@ function calculateNonBlocking(data: number[]): Promise<number[]> {
     });
 }
 
-// ✅ CORRECTO - Worker threads para CPU-intensive
+// ✅ CORRECT - Worker threads for CPU-intensive
 import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 
 if (isMainThread) {
@@ -66,10 +66,10 @@ if (isMainThread) {
     });
 
     worker.on('message', (result) => {
-        console.log('Resultado:', result);
+        console.log('Result:', result);
     });
 } else {
-    // Worker thread - no bloquea el main thread
+    // Worker thread - doesn't block main thread
     const result = heavyCalculation(workerData);
     parentPort?.postMessage(result);
 }
@@ -77,29 +77,29 @@ if (isMainThread) {
 
 ---
 
-## 2. Promise.all vs Loops Seriales
+## 2. Promise.all vs Serial Loops
 
 ```typescript
-// ❌ INEFICIENTE - Serialización innecesaria
+// ❌ INEFFICIENT - Unnecessary serialization
 async function fetchUsers(userIds: string[]): Promise<User[]> {
     const users: User[] = [];
     for (const id of userIds) {
-        const user = await db.users.findById(id); // Espera cada uno
+        const user = await db.users.findById(id); // Waits for each one
         users.push(user);
     }
     return users;
 }
 
-// ✅ CORRECTO - Paralelismo con Promise.all
+// ✅ CORRECT - Parallelism with Promise.all
 async function fetchUsers(userIds: string[]): Promise<User[]> {
     const promises = userIds.map(id => db.users.findById(id));
-    return Promise.all(promises); // Todas en paralelo
+    return Promise.all(promises); // All in parallel
 }
 
-// ✅ CORRECTO - Límite de concurrencia para evitar saturación
+// ✅ CORRECT - Concurrency limit to avoid saturation
 import pLimit from 'p-limit';
 
-const limit = pLimit(10); // Máximo 10 concurrentes
+const limit = pLimit(10); // Maximum 10 concurrent
 
 async function fetchWithLimit(userIds: string[]): Promise<User[]> {
     const promises = userIds.map(id =>
@@ -108,7 +108,7 @@ async function fetchWithLimit(userIds: string[]): Promise<User[]> {
     return Promise.all(promises);
 }
 
-// ✅ CORRECTO - Promise.allSettled para manejo de errores
+// ✅ CORRECT - Promise.allSettled for error handling
 async function fetchWithErrorHandling(userIds: string[]) {
     const results = await Promise.allSettled(
         userIds.map(id => db.users.findById(id))
@@ -129,8 +129,8 @@ async function fetchWithErrorHandling(userIds: string[]) {
 ## 3. Map/Set vs Arrays
 
 ```typescript
-// ❌ INEFICIENTE - Búsqueda O(n) en array
-const allowedIds = ['a', 'b', 'c', 'd', ...]; // 1000+ elementos
+// ❌ INEFFICIENT - O(n) search in array
+const allowedIds = ['a', 'b', 'c', 'd', ...]; // 1000+ elements
 
 function isAllowed(id: string): boolean {
     return allowedIds.includes(id); // O(n)
@@ -138,7 +138,7 @@ function isAllowed(id: string): boolean {
 
 items.filter(item => isAllowed(item.id)); // O(n * m)
 
-// ✅ CORRECTO - Búsqueda O(1) con Set
+// ✅ CORRECT - O(1) search with Set
 const allowedSet = new Set(allowedIds);
 
 function isAllowed(id: string): boolean {
@@ -147,30 +147,30 @@ function isAllowed(id: string): boolean {
 
 items.filter(item => isAllowed(item.id)); // O(n)
 
-// ✅ CORRECTO - Map para lookup por ID
-// ❌ Array: find es O(n)
+// ✅ CORRECT - Map for ID lookup
+// ❌ Array: find is O(n)
 const user = users.find(u => u.id === userId);
 
-// ✅ Map: get es O(1)
+// ✅ Map: get is O(1)
 const userMap = new Map(users.map(u => [u.id, u]));
 const user = userMap.get(userId);
 
-// ✅ CORRECTO - Set para deduplicación
-// ❌ Lento: filter + indexOf
+// ✅ CORRECT - Set for deduplication
+// ❌ Slow: filter + indexOf
 const unique = items.filter((item, index) =>
     items.indexOf(item) === index
 ); // O(n²)
 
-// ✅ Rápido: Set
+// ✅ Fast: Set
 const unique = [...new Set(items)]; // O(n)
 ```
 
 ---
 
-## 4. Memoization con Closures
+## 4. Memoization with Closures
 
 ```typescript
-// ✅ CORRECTO - Memoización simple
+// ✅ CORRECT - Simple memoization
 function memoize<T, R>(fn: (arg: T) => R): (arg: T) => R {
     const cache = new Map<T, R>();
 
@@ -185,13 +185,13 @@ function memoize<T, R>(fn: (arg: T) => R): (arg: T) => R {
     };
 }
 
-// Uso
+// Usage
 const fibonacci = memoize((n: number): number => {
     if (n < 2) return n;
     return fibonacci(n - 1) + fibonacci(n - 2);
 });
 
-// ✅ CORRECTO - LRU Cache con límite de tamaño
+// ✅ CORRECT - LRU Cache with size limit
 class LRUCache<K, V> {
     private cache = new Map<K, V>();
 
@@ -200,7 +200,7 @@ class LRUCache<K, V> {
     get(key: K): V | undefined {
         const value = this.cache.get(key);
         if (value !== undefined) {
-            // Mover al final (más reciente)
+            // Move to end (most recent)
             this.cache.delete(key);
             this.cache.set(key, value);
         }
@@ -209,7 +209,7 @@ class LRUCache<K, V> {
 
     set(key: K, value: V): void {
         if (this.cache.size >= this.maxSize) {
-            // Eliminar el más antiguo
+            // Remove oldest
             const firstKey = this.cache.keys().next().value;
             this.cache.delete(firstKey);
         }
@@ -217,7 +217,7 @@ class LRUCache<K, V> {
     }
 }
 
-// ✅ CORRECTO - Memoización de funciones asíncronas
+// ✅ CORRECT - Async function memoization
 function memoizeAsync<T, R>(
     fn: (arg: T) => Promise<R>,
     ttl: number = 60000
@@ -238,32 +238,32 @@ function memoizeAsync<T, R>(
     };
 }
 
-// Uso para queries a DB
+// Usage for DB queries
 const getUserCached = memoizeAsync(
     (userId: string) => db.users.findById(userId),
-    5000 // 5 segundos TTL
+    5000 // 5 seconds TTL
 );
 ```
 
 ---
 
-## 5. Lazy Loading de Módulos
+## 5. Lazy Module Loading
 
 ```typescript
-// ❌ INEFICIENTE - Carga todo al inicio
+// ❌ INEFFICIENT - Load everything at startup
 import { HeavyLibrary } from 'heavy-library';
 import { AnotherHeavy } from 'another-heavy';
 
-const lib = new HeavyLibrary(); // Carga inmediata, memoria usada
+const lib = new HeavyLibrary(); // Immediate load, memory used
 
-// ✅ CORRECTO - Dynamic import (lazy loading)
+// ✅ CORRECT - Dynamic import (lazy loading)
 async function processWithHeavyLib(data: Data) {
     const { HeavyLibrary } = await import('heavy-library');
     const lib = new HeavyLibrary();
     return lib.process(data);
 }
 
-// ✅ CORRECTO - Lazy initialization con closure
+// ✅ CORRECT - Lazy initialization with closure
 function createLazyLoader<T>(factory: () => T): () => T {
     let instance: T | undefined;
 
@@ -275,16 +275,16 @@ function createLazyLoader<T>(factory: () => T): () => T {
     };
 }
 
-// Uso
+// Usage
 const getConfig = createLazyLoader(() => {
     console.log('Loading config...');
     return loadConfigFromFile();
 });
 
-// Config no se carga hasta que se necesite
+// Config doesn't load until needed
 const config = getConfig();
 
-// ✅ CORRECTO - React.lazy para code splitting
+// ✅ CORRECT - React.lazy for code splitting
 import React, { Suspense, lazy } from 'react';
 
 const HeavyComponent = lazy(() => import('./HeavyComponent'));
@@ -300,10 +300,10 @@ function App() {
 
 ---
 
-## 6. Worker Threads para CPU-intensive
+## 6. Worker Threads for CPU-intensive
 
 ```typescript
-// ✅ CORRECTO - Pool de workers
+// ✅ CORRECT - Worker pool
 import { Worker } from 'worker_threads';
 import os from 'os';
 
@@ -326,7 +326,7 @@ class WorkerPool {
 
         worker.on('message', (result) => {
             this.activeWorkers--;
-            // Procesar siguiente tarea
+            // Process next task
             this.processQueue();
         });
 
@@ -359,7 +359,7 @@ class WorkerPool {
     }
 }
 
-// Uso
+// Usage
 const pool = new WorkerPool('./image-processor.worker.js', 4);
 const results = await Promise.all(
     images.map(img => pool.execute({ image: img, operation: 'resize' }))
@@ -368,14 +368,14 @@ const results = await Promise.all(
 
 ---
 
-## 7. N+1 Queries con Prisma/TypeORM
+## 7. N+1 Queries with Prisma/TypeORM
 
 ```typescript
-// ❌ PROHIBIDO - N+1 Queries
+// ❌ PROHIBITED - N+1 Queries
 // Prisma
 const users = await prisma.user.findMany();
 for (const user of users) {
-    // Query adicional por cada usuario!
+    // Additional query per user!
     const posts = await prisma.post.findMany({
         where: { authorId: user.id }
     });
@@ -387,20 +387,20 @@ for (const user of users) {
     const posts = await postRepo.find({ where: { authorId: user.id } });
 }
 
-// ✅ CORRECTO - Prisma include (eager loading)
+// ✅ CORRECT - Prisma include (eager loading)
 const users = await prisma.user.findMany({
     include: {
-        posts: true,      // JOIN en una query
-        profile: true,    // SELECT relacionado
+        posts: true,      // JOIN in one query
+        profile: true,    // Related SELECT
     }
 });
 
-// ✅ CORRECTO - TypeORM relations
+// ✅ CORRECT - TypeORM relations
 const users = await userRepo.find({
     relations: ['posts', 'profile']
 });
 
-// ✅ CORRECTO - Query raw cuando ORM no es suficiente
+// ✅ CORRECT - Raw query when ORM is insufficient
 // Prisma
 const usersWithPostCount = await prisma.$queryRaw`
     SELECT u.*, COUNT(p.id) as post_count
@@ -417,19 +417,19 @@ const usersWithPostCount = await dataSource.query(`
     GROUP BY u.id
 `);
 
-// ✅ CORRECTO - Batch loading con DataLoader
+// ✅ CORRECT - Batch loading with DataLoader
 import DataLoader from 'dataloader';
 
 const postLoader = new DataLoader(async (userIds: string[]) => {
     const posts = await prisma.post.findMany({
         where: { authorId: { in: userIds } }
     });
-    // Agrupar por userId
+    // Group by userId
     const postsByUser = groupBy(posts, 'authorId');
     return userIds.map(id => postsByUser.get(id) || []);
 });
 
-// Ahora esto hace una sola query
+// Now this makes a single query
 for (const user of users) {
     const posts = await postLoader.load(user.id); // Batched!
 }
@@ -437,41 +437,41 @@ for (const user of users) {
 
 ---
 
-## Checklist TypeScript Específico
+## TypeScript Specific Checklist
 
-### Concurrencia
-- [ ] Promise.all para operaciones independientes
-- [ ] p-limit para controlar concurrencia
-- [ ] Worker threads para CPU-intensive
-- [ ] setImmediate para ceder event loop
+### Concurrency
+- [ ] Promise.all for independent operations
+- [ ] p-limit to control concurrency
+- [ ] Worker threads for CPU-intensive
+- [ ] setImmediate to yield event loop
 
-### Estructuras de Datos
-- [ ] Set.has() en lugar de array.includes()
-- [ ] Map.get() en lugar de array.find()
-- [ ] new Set() para deduplicación
+### Data Structures
+- [ ] Set.has() instead of array.includes()
+- [ ] Map.get() instead of array.find()
+- [ ] new Set() for deduplication
 
 ### Caching
-- [ ] Memoización para cálculos costosos
-- [ ] DataLoader para N+1 queries
-- [ ] LRU cache con TTL
+- [ ] Memoization for expensive calculations
+- [ ] DataLoader for N+1 queries
+- [ ] LRU cache with TTL
 
-### Módulos
-- [ ] Dynamic imports para lazy loading
-- [ ] React.lazy para code splitting
+### Modules
+- [ ] Dynamic imports for lazy loading
+- [ ] React.lazy for code splitting
 - [ ] Lazy initialization
 
-### Base de Datos
-- [ ] include/relations para eager loading
-- [ ] DataLoader para resolvers GraphQL
-- [ ] Query raw para queries complejas
+### Database
+- [ ] include/relations for eager loading
+- [ ] DataLoader for GraphQL resolvers
+- [ ] Raw query for complex queries
 
 ### Strings
-- [ ] Array.join() en lugar de += en loops
-- [ ] Template literals eficientes
+- [ ] Array.join() instead of += in loops
+- [ ] Efficient template literals
 
 ---
 
-## Referencias
+## References
 
 - [Node.js Performance](https://nodejs.org/en/docs/guides/simple-profiling/)
 - [Worker Threads](https://nodejs.org/api/worker_threads.html)

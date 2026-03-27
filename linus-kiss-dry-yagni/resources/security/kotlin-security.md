@@ -1,76 +1,76 @@
-# Seguridad Específica - Kotlin
+# Language-Specific Security - Kotlin
 
-> Guía de protecciones de seguridad para código Kotlin (JVM/Android). NUNCA eliminar estos patrones al aplicar KISS-DRY-YAGNI.
+> Security protection guide for Kotlin code (JVM/Android). NEVER remove these patterns when applying KISS-DRY-YAGNI.
 
 ---
 
 ## 1. Null Safety
 
-### El Problema
+### The Problem
 ```kotlin
-// ❌ Java-style null (puede causar NPE)
+// ❌ Java-style null (can cause NPE)
 var name: String? = null
 val length = name.length // NullPointerException!
 
-// ❌ Forzar non-null sin verificar
-val name: String = nullableName!! // Crash si es null
+// ❌ Force non-null without checking
+val name: String = nullableName!! // Crash if null
 ```
 
-### La Solución
+### The Solution
 ```kotlin
-// ✅ CORRECTO - Safe call con elvis operator
+// ✅ CORRECT - Safe call with elvis operator
 val length = name?.length ?: 0
 
-// ✅ CORRECTO - Safe call con early return
+// ✅ CORRECT - Safe call with early return
 fun processUser(user: User?) {
-    val name = user?.name ?: return // Early return si null
-    // Procesar name
+    val name = user?.name ?: return // Early return if null
+    // Process name
 }
 
-// ✅ CORRECTO - Smart cast después de verificación
+// ✅ CORRECT - Smart cast after verification
 fun processUser(user: User?) {
     if (user == null) return
-    // Ahora user es non-null (smart cast)
+    // Now user is non-null (smart cast)
     println(user.name)
 }
 
-// ✅ CORRECTO - let para scopes seguros
+// ✅ CORRECT - let for safe scopes
 user?.let { safeUser ->
-    // safeUser es non-null aquí
+    // safeUser is non-null here
     process(safeUser)
 }
 ```
 
 ---
 
-## 2. Inyección de Dependencias Segura
+## 2. Secure Dependency Injection
 
 ### Spring Boot
 ```kotlin
-// ✅ CORRECTO - Constructor injection (recomendado)
+// ✅ CORRECT - Constructor injection (recommended)
 @Service
 class UserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder
 ) {
     fun createUser(request: CreateUserRequest): User {
-        // Usar injected dependencies
+        // Use injected dependencies
     }
 }
 
-// ❌ EVITAR - Field injection
+// ❌ AVOID - Field injection
 @Service
 class BadUserService {
     @Autowired
-    private lateinit var userRepository: UserRepository // Puede no estar inicializado
+    private lateinit var userRepository: UserRepository // May not be initialized
 }
 
-// ✅ CORRECTO - Validación de input
+// ✅ CORRECT - Input validation
 @PostMapping("/users")
 fun createUser(
     @Valid @RequestBody request: CreateUserRequest
 ): ResponseEntity<User> {
-    // Validación automática por @Valid
+    // Automatic validation by @Valid
     return ResponseEntity.ok(userService.create(request))
 }
 
@@ -92,18 +92,18 @@ data class CreateUserRequest(
 ## 3. SQL Injection (JPA/JDBC)
 
 ```kotlin
-// ❌ PROHIBIDO - Concatenación de strings
+// ❌ FORBIDDEN - String concatenation
 @Query("SELECT * FROM users WHERE name = '$name'")
 fun findByName(name: String): List<User>
 
-// ✅ CORRECTO - Parámetros nombrados
+// ✅ CORRECT - Named parameters
 @Query("SELECT u FROM User u WHERE u.name = :name")
 fun findByName(@Param("name") name: String): List<User>
 
-// ✅ CORRECTO - Métodos derivados (Spring genera query segura)
+// ✅ CORRECT - Derived methods (Spring generates safe query)
 fun findByUsernameAndActive(username: String, active: Boolean): List<User>
 
-// ✅ CORRECTO - Criteria API para queries dinámicas
+// ✅ CORRECT - Criteria API for dynamic queries
 fun findUsers(criteria: UserCriteria): List<User> {
     val cb = entityManager.criteriaBuilder
     val query = cb.createQuery(User::class.java)
@@ -123,7 +123,7 @@ fun findUsers(criteria: UserCriteria): List<User> {
     return entityManager.createQuery(query).resultList
 }
 
-// ✅ CORRECTO - JPA Repository con JPQL seguro
+// ✅ CORRECT - JPA Repository with safe JPQL
 interface UserRepository : JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.email = ?1")
     fun findByEmail(email: String): User?
@@ -135,7 +135,7 @@ interface UserRepository : JpaRepository<User, Long> {
 ## 4. Password Hashing
 
 ```kotlin
-// ✅ CORRECTO - BCrypt (Spring Security)
+// ✅ CORRECT - BCrypt (Spring Security)
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 
 @Configuration
@@ -157,7 +157,7 @@ class AuthService(
     }
 }
 
-// ✅ CORRECTO - Argon2 (más moderno)
+// ✅ CORRECT - Argon2 (more modern)
 import de.mkammerer.argon2.Argon2Factory
 
 class Argon2PasswordHasher {
@@ -182,7 +182,7 @@ class Argon2PasswordHasher {
 ## 5. JWT (JSON Web Tokens)
 
 ```kotlin
-// ✅ CORRECTO - JJWT con validación estricta
+// ✅ CORRECT - JJWT with strict validation
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import java.util.*
@@ -235,7 +235,7 @@ class JwtTokenProvider(
 
 ---
 
-## 6. Configuración de Seguridad (Spring Security)
+## 6. Security Configuration (Spring Security)
 
 ```kotlin
 @Configuration
@@ -247,7 +247,7 @@ class SecurityConfig(
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http {
-            csrf { disable() } // Solo para APIs stateless
+            csrf { disable() } // Only for stateless APIs
             sessionManagement {
                 sessionCreationPolicy = SessionCreationPolicy.STATELESS
             }
@@ -277,10 +277,10 @@ class SecurityConfig(
 
 ---
 
-## 7. Validación de Input
+## 7. Input Validation
 
 ```kotlin
-// ✅ CORRECTO - Bean Validation
+// ✅ CORRECT - Bean Validation
 import javax.validation.constraints.*
 
 data class UserRegistrationRequest(
@@ -303,20 +303,20 @@ data class UserRegistrationRequest(
     val password: String
 )
 
-// ✅ CORRECTO - Validación manual para casos complejos
+// ✅ CORRECT - Manual validation for complex cases
 fun validateFileUpload(file: MultipartFile): Result<Unit> {
-    // Validar tamaño
+    // Validate size
     if (file.size > 10 * 1024 * 1024) {
         return Result.failure(ValidationException("File too large"))
     }
 
-    // Validar tipo MIME
+    // Validate MIME type
     val allowedTypes = setOf("application/pdf", "image/jpeg", "image/png")
     if (file.contentType !in allowedTypes) {
         return Result.failure(ValidationException("Invalid file type"))
     }
 
-    // Validar extensión
+    // Validate extension
     val extension = file.originalFilename?.substringAfterLast('.')?.lowercase()
     val allowedExtensions = setOf("pdf", "jpg", "jpeg", "png")
     if (extension !in allowedExtensions) {
@@ -329,10 +329,10 @@ fun validateFileUpload(file: MultipartFile): Result<Unit> {
 
 ---
 
-## 8. Manejo de Excepciones
+## 8. Exception Handling
 
 ```kotlin
-// ✅ CORRECTO - No exponer información interna
+// ✅ CORRECT - Don't expose internal information
 @RestControllerAdvice
 class GlobalExceptionHandler {
 
@@ -345,10 +345,10 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleGeneric(e: Exception): ResponseEntity<ErrorResponse> {
-        // Log full stack trace para debugging
+        // Log full stack trace for debugging
         logger.error("Unexpected error", e)
 
-        // Pero no exponer al cliente
+        // But don't expose to client
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(ErrorResponse("An unexpected error occurred"))
@@ -365,10 +365,10 @@ class GlobalExceptionHandler {
 
 ---
 
-## 9. Concurrencia Segura
+## 9. Safe Concurrency
 
 ```kotlin
-// ✅ CORRECTO - Atomic operations
+// ✅ CORRECT - Atomic operations
 import java.util.concurrent.atomic.AtomicInteger
 
 class SafeCounter {
@@ -378,7 +378,7 @@ class SafeCounter {
     fun get(): Int = count.get()
 }
 
-// ✅ CORRECTO - Concurrent collections
+// ✅ CORRECT - Concurrent collections
 import java.util.concurrent.ConcurrentHashMap
 
 class SafeCache<K, V> {
@@ -391,7 +391,7 @@ class SafeCache<K, V> {
     fun get(key: K): V? = cache[key]
 }
 
-// ✅ CORRECTO - Mutex para operaciones complejas
+// ✅ CORRECT - Mutex for complex operations
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -420,10 +420,10 @@ class SafeAccount {
 
 ---
 
-## 10. Android Específico
+## 10. Android Specific
 
 ```kotlin
-// ✅ CORRECTO - ProGuard/R8 para ofuscación
+// ✅ CORRECT - ProGuard/R8 for obfuscation
 // build.gradle.kts
 android {
     buildTypes {
@@ -437,7 +437,7 @@ android {
     }
 }
 
-// ✅ CORRECTO - Network Security Config
+// ✅ CORRECT - Network Security Config
 // res/xml/network_security_config.xml
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
@@ -448,7 +448,7 @@ android {
     </base-config>
 </network-security-config>
 
-// ✅ CORRECTO - Encriptación local
+// ✅ CORRECT - Local encryption
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 
@@ -473,39 +473,39 @@ class SecureStorage(context: Context) {
 
 ---
 
-## Checklist Kotlin Específico
+## Kotlin-Specific Checklist
 
 ### Null Safety
-- [ ] Usar ?. (safe call) en lugar de !! (non-null assertion)
-- [ ] Usar ?: (elvis operator) para defaults
-- [ ] Usar let para operaciones en valores nullable
-- [ ] Smart casts después de verificación null
+- [ ] Use ?. (safe call) instead of !! (non-null assertion)
+- [ ] Use ?: (elvis operator) for defaults
+- [ ] Use let for operations on nullable values
+- [ ] Smart casts after null check
 
-### Seguridad
-- [ ] Constructor injection en lugar de field injection
-- [ ] @Valid para validación automática de input
-- [ ] Queries parametrizadas (JPA/JDBC)
-- [ ] BCrypt/Argon2 para passwords
-- [ ] JWT con validación estricta de claims
-- [ ] Spring Security con configuración explícita
-- [ ] Manejo de excepciones sin exponer detalles internos
-- [ ] Validación de archivos (tamaño, tipo, extensión)
+### Security
+- [ ] Constructor injection instead of field injection
+- [ ] @Valid for automatic input validation
+- [ ] Parameterized queries (JPA/JDBC)
+- [ ] BCrypt/Argon2 for passwords
+- [ ] JWT with strict claims validation
+- [ ] Spring Security with explicit configuration
+- [ ] Exception handling without exposing internal details
+- [ ] File validation (size, type, extension)
 
-### Concurrencia
-- [ ] AtomicInteger/AtomicReference para contadores
-- [ ] ConcurrentHashMap para caches
-- [ ] Mutex para operaciones complejas
-- [ ] Coroutines con manejo apropiado de errores
+### Concurrency
+- [ ] AtomicInteger/AtomicReference for counters
+- [ ] ConcurrentHashMap for caches
+- [ ] Mutex for complex operations
+- [ ] Coroutines with proper error handling
 
 ### Android
-- [ ] ProGuard/R8 habilitado en release
+- [ ] ProGuard/R8 enabled in release
 - [ ] Network Security Config
-- [ ] EncryptedSharedPreferences para datos sensibles
-- [ ] BiometricPrompt para autenticación fuerte
+- [ ] EncryptedSharedPreferences for sensitive data
+- [ ] BiometricPrompt for strong authentication
 
 ---
 
-## Referencias
+## References
 
 - [OWASP Mobile Security](https://owasp.org/www-project-mobile-security/)
 - [Spring Security Kotlin](https://docs.spring.io/spring-security/reference/)

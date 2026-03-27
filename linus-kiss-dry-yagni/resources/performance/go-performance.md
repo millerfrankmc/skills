@@ -1,27 +1,27 @@
-# Rendimiento Específico - Go
+# Performance Specific - Go
 
-> Guía de optimizaciones de rendimiento para código Go. NUNCA sacrificar rendimiento obvio por "código más limpio".
+> Guide for performance optimizations in Go code. NEVER sacrifice obvious performance for "cleaner code".
 
 ---
 
-## 1. Goroutines y Channels
+## 1. Goroutines and Channels
 
-### El Problema
+### The Problem
 
 ```go
-// ❌ INEFICIENTE - Goroutines sin control
+// ❌ INEFFICIENT - Goroutines without control
 func processAll(items []Item) {
     for _, item := range items {
-        go process(item) // Goroutine por cada item: miles de goroutines!
+        go process(item) // Goroutine per item: thousands of goroutines!
     }
 }
 
-// ❌ INEFICIENTE - Channel sin buffer causa bloqueos
+// ❌ INEFFICIENT - Unbuffered channel causes blocking
 func producer() <-chan int {
-    ch := make(chan int) // Sin buffer
+    ch := make(chan int) // No buffer
     go func() {
         for i := 0; i < 1000; i++ {
-            ch <- i // Bloquea hasta que alguien reciba
+            ch <- i // Blocks until someone receives
         }
         close(ch)
     }()
@@ -29,15 +29,15 @@ func producer() <-chan int {
 }
 ```
 
-### La Solución
+### The Solution
 
 ```go
-// ✅ CORRECTO - Worker pool con goroutines controladas
+// ✅ CORRECT - Worker pool with controlled goroutines
 func processAll(items []Item, workers int) {
     jobs := make(chan Item, len(items))
     results := make(chan Result, len(items))
 
-    // Workers limitados
+    // Limited workers
     for w := 0; w < workers; w++ {
         go func() {
             for item := range jobs {
@@ -46,32 +46,32 @@ func processAll(items []Item, workers int) {
         }()
     }
 
-    // Enviar trabajos
+    // Send jobs
     for _, item := range items {
         jobs <- item
     }
     close(jobs)
 
-    // Recoger resultados
+    // Collect results
     for i := 0; i < len(items); i++ {
         <-results
     }
 }
 
-// ✅ CORRECTO - Channels con buffer apropiado
+// ✅ CORRECT - Channels with appropriate buffer
 func producer() <-chan int {
-    // Buffer permite que el producer avance sin bloquearse
+    // Buffer allows producer to advance without blocking
     ch := make(chan int, 100)
     go func() {
         for i := 0; i < 1000; i++ {
-            ch <- i // No bloquea hasta que buffer esté lleno
+            ch <- i // Doesn't block until buffer is full
         }
         close(ch)
     }()
     return ch
 }
 
-// ✅ CORRECTO - Context para cancelación
+// ✅ CORRECT - Context for cancellation
 func processWithTimeout(ctx context.Context, items []Item) error {
     ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
     defer cancel()
@@ -92,16 +92,16 @@ func processWithTimeout(ctx context.Context, items []Item) error {
 
 ---
 
-## 2. sync.Pool para Reuso de Objetos
+## 2. sync.Pool for Object Reuse
 
 ```go
-// ❌ INEFICIENTE - Crear objetos repetidamente
+// ❌ INEFFICIENT - Creating objects repeatedly
 func handleRequest(w http.ResponseWriter, r *http.Request) {
-    buf := make([]byte, 4096) // Nueva asignación por request
-    // usar buf...
+    buf := make([]byte, 4096) // New allocation per request
+    // use buf...
 }
 
-// ✅ CORRECTO - sync.Pool para reutilizar buffers
+// ✅ CORRECT - sync.Pool to reuse buffers
 var bufferPool = sync.Pool{
     New: func() interface{} {
         return make([]byte, 4096)
@@ -110,15 +110,15 @@ var bufferPool = sync.Pool{
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
     buf := bufferPool.Get().([]byte)
-    defer bufferPool.Put(buf) // Devolver al pool al terminar
+    defer bufferPool.Put(buf) // Return to pool when done
 
-    // Resetear buffer si es necesario
+    // Reset buffer if needed
     buf = buf[:0]
 
-    // usar buf...
+    // use buf...
 }
 
-// ✅ CORRECTO - Pool para estructuras complejas
+// ✅ CORRECT - Pool for complex structures
 type Document struct {
     Data []byte
     Meta map[string]string
@@ -136,13 +136,13 @@ var docPool = sync.Pool{
 func processDocument(input []byte) *Document {
     doc := docPool.Get().(*Document)
 
-    // Resetear estado
+    // Reset state
     doc.Data = doc.Data[:0]
     for k := range doc.Meta {
         delete(doc.Meta, k)
     }
 
-    // Procesar...
+    // Process...
     doc.Data = append(doc.Data, input...)
 
     return doc
@@ -151,24 +151,24 @@ func processDocument(input []byte) *Document {
 
 ---
 
-## 3. strings.Builder vs Concatenación
+## 3. strings.Builder vs Concatenation
 
 ```go
-// ❌ INEFICIENTE - Concatenación con +=
+// ❌ INEFFICIENT - Concatenation with +=
 func buildString(parts []string) string {
     var result string
     for _, part := range parts {
-        result += part // Crea nuevo string cada vez
+        result += part // Creates new string each time
     }
     return result
 }
 
-// ✅ CORRECTO - strings.Builder
+// ✅ CORRECT - strings.Builder
 import "strings"
 
 func buildString(parts []string) string {
     var b strings.Builder
-    // Pre-allocar si conocemos tamaño aproximado
+    // Pre-allocate if we know approximate size
     b.Grow(1024)
 
     for _, part := range parts {
@@ -177,18 +177,18 @@ func buildString(parts []string) string {
     return b.String()
 }
 
-// ✅ CORRECTO - Pre-allocación exacta
+// ✅ CORRECT - Exact pre-allocation
 func buildCSV(rows [][]string) string {
-    // Calcular tamaño exacto
+    // Calculate exact size
     totalSize := 0
     for _, row := range rows {
         for _, cell := range row {
-            totalSize += len(cell) + 1 // +1 para separador
+            totalSize += len(cell) + 1 // +1 for separator
         }
     }
 
     var b strings.Builder
-    b.Grow(totalSize) // Una sola asignación
+    b.Grow(totalSize) // Single allocation
 
     for i, row := range rows {
         if i > 0 {
@@ -207,48 +207,48 @@ func buildCSV(rows [][]string) string {
 
 ---
 
-## 4. Pre-allocación de Slices
+## 4. Slice Pre-allocation
 
 ```go
-// ❌ INEFICIENTE - Crecimiento dinámico (múltiples allocations)
+// ❌ INEFFICIENT - Dynamic growth (multiple allocations)
 func filterEven(nums []int) []int {
     var result []int
     for _, n := range nums {
         if n%2 == 0 {
-            result = append(result, n) // Reallocation cada vez que crece
+            result = append(result, n) // Reallocation each time it grows
         }
     }
     return result
 }
 
-// ✅ CORRECTO - Pre-allocar con capacidad estimada
+// ✅ CORRECT - Pre-allocate with estimated capacity
 func filterEven(nums []int) []int {
-    // Estimamos que la mitad serán pares
+    // Estimate that half will be even
     result := make([]int, 0, len(nums)/2)
 
     for _, n := range nums {
         if n%2 == 0 {
-            result = append(result, n) // Sin reallocation
+            result = append(result, n) // No reallocation
         }
     }
     return result
 }
 
-// ✅ CORRECTO - make con length para casos específicos
+// ✅ CORRECT - make with length for specific cases
 func initSlice(size int) []int {
-    // Si sabemos el tamaño final exacto
-    s := make([]int, size) // Todos los elementos existen (valor cero)
+    // If we know exact final size
+    s := make([]int, size) // All elements exist (zero value)
 
     for i := range s {
-        s[i] = i * i // Asignación directa, más rápido que append
+        s[i] = i * i // Direct assignment, faster than append
     }
     return s
 }
 
-// ✅ CORRECTO - copy para slices
+// ✅ CORRECT - copy for slices
 func cloneSlice(s []int) []int {
     result := make([]int, len(s))
-    copy(result, s) // Más rápido que loop manual
+    copy(result, s) // Faster than manual loop
     return result
 }
 ```
@@ -258,51 +258,51 @@ func cloneSlice(s []int) []int {
 ## 5. Escape Analysis
 
 ```go
-// ❌ INEFICIENTE - Allocación en heap (escapa)
+// ❌ INEFFICIENT - Heap allocation (escapes)
 func createUser(name string) *User {
-    u := &User{Name: name} // Escapa al heap
+    u := &User{Name: name} // Escapes to heap
     return u
 }
 
-// ✅ CORRECTO - Stack allocation cuando es posible
+// ✅ CORRECT - Stack allocation when possible
 func createUser(name string) User {
-    u := User{Name: name} // En stack
-    return u // Copia, no escapa
+    u := User{Name: name} // On stack
+    return u // Copy, doesn't escape
 }
 
-// ❌ INEFICIENTE - Interface causa escape
+// ❌ INEFFICIENT - Interface causes escape
 func process(data interface{}) {
-    // data escapa porque interface{} es puntero
+    // data escapes because interface{} is pointer
 }
 
-// ✅ CORRECTO - Tipos concretos
+// ✅ CORRECT - Concrete types
 func process(data []byte) {
-    // data puede quedarse en stack
+    // data can stay on stack
 }
 
-// Verificar escapes: go build -gcflags="-m" .
+// Check escapes: go build -gcflags="-m" .
 
-// ❌ INEFICIENTE - Captura de variable en closure
+// ❌ INEFFICIENT - Variable capture in closure
 for i := 0; i < 10; i++ {
     go func() {
-        fmt.Println(i) // i escapa al heap
+        fmt.Println(i) // i escapes to heap
     }()
 }
 
-// ✅ CORRECTO - Pasar como parámetro
+// ✅ CORRECT - Pass as parameter
 for i := 0; i < 10; i++ {
     go func(n int) {
-        fmt.Println(n) // n en stack
+        fmt.Println(n) // n on stack
     }(i)
 }
 ```
 
 ---
 
-## 6. Profiling con pprof
+## 6. Profiling with pprof
 
 ```go
-// ✅ CORRECTO - Habilitar profiling
+// ✅ CORRECT - Enable profiling
 import (
     "net/http"
     _ "net/http/pprof"
@@ -312,15 +312,15 @@ func main() {
     go func() {
         http.ListenAndServe("localhost:6060", nil)
     }()
-    // Tu aplicación...
+    // Your application...
 }
 
-// Comandos de análisis:
+// Analysis commands:
 // go tool pprof http://localhost:6060/debug/pprof/profile  # CPU
-// go tool pprof http://localhost:6060/debug/pprof/heap     # Memoria
+// go tool pprof http://localhost:6060/debug/pprof/heap     # Memory
 // go tool pprof http://localhost:6060/debug/pprof/goroutine # Goroutines
 
-// ✅ CORRECTO - Benchmarks con testing
+// ✅ CORRECT - Benchmarks with testing
 func BenchmarkProcessData(b *testing.B) {
     data := generateTestData(1000)
 
@@ -330,11 +330,11 @@ func BenchmarkProcessData(b *testing.B) {
     }
 }
 
-// Ejecutar: go test -bench=. -benchmem
+// Run: go test -bench=. -benchmem
 
-// ✅ CORRECTO - Perfil de memoria en benchmarks
+// ✅ CORRECT - Memory profile in benchmarks
 func BenchmarkWithAllocs(b *testing.B) {
-    b.ReportAllocs() // Reporta allocations
+    b.ReportAllocs() // Report allocations
 
     for i := 0; i < b.N; i++ {
         result := processData()
@@ -345,10 +345,10 @@ func BenchmarkWithAllocs(b *testing.B) {
 
 ---
 
-## 7. Eficiencia de Structs vs Interfaces
+## 7. Struct vs Interface Efficiency
 
 ```go
-// ❌ INEFICIENTE - Interface con overhead
+// ❌ INEFFICIENT - Interface with overhead
 func Sum(numbers []interface{}) int {
     total := 0
     for _, n := range numbers {
@@ -357,18 +357,18 @@ func Sum(numbers []interface{}) int {
     return total
 }
 
-// ✅ CORRECTO - Slice tipado
+// ✅ CORRECT - Typed slice
 func Sum(numbers []int) int {
     total := 0
     for _, n := range numbers {
-        total += n // Directo, sin overhead
+        total += n // Direct, no overhead
     }
     return total
 }
 
-// ✅ CORRECTO - Struct layout para cache
+// ✅ CORRECT - Struct layout for cache
 
-// ❌ Mal: padding innecesario
+// ❌ Bad: unnecessary padding
 type BadLayout struct {
     A bool     // 1 byte + 7 bytes padding
     B int64    // 8 bytes
@@ -376,62 +376,62 @@ type BadLayout struct {
     D int64    // 8 bytes
 } // Total: 32 bytes
 
-// ✅ Bueno: campos agrupados por tamaño
+// ✅ Good: fields grouped by size
 type GoodLayout struct {
     B int64    // 8 bytes
     D int64    // 8 bytes
     A bool     // 1 byte
     C bool     // 1 byte
-    // 6 bytes padding al final
+    // 6 bytes padding at end
 } // Total: 24 bytes
 
-// ✅ CORRECTO - Reusar backing array al filtrar
+// ✅ CORRECT - Reuse backing array when filtering
 func filterInPlace(items []Item, predicate func(Item) bool) []Item {
     n := 0
     for _, item := range items {
         if predicate(item) {
-            items[n] = item // Reusar mismo array
+            items[n] = item // Reuse same array
             n++
         }
     }
-    return items[:n] // Nuevo slice, mismo backing array
+    return items[:n] // New slice, same backing array
 }
 ```
 
 ---
 
-## Checklist Go Específico
+## Go Specific Checklist
 
 ### Goroutines
-- [ ] Worker pools para controlar concurrencia
-- [ ] Channels con buffer apropiado
-- [ ] Context para timeout/cancelación
-- [ ] Evitar race conditions con sync.Mutex
+- [ ] Worker pools to control concurrency
+- [ ] Channels with appropriate buffer
+- [ ] Context for timeout/cancellation
+- [ ] Avoid race conditions with sync.Mutex
 
-### Memoria
-- [ ] sync.Pool para objetos frecuentemente creados
-- [ ] Pre-allocar slices con make(capacity)
-- [ ] strings.Builder para concatenación
-- [ ] Minimizar escapes al heap
+### Memory
+- [ ] sync.Pool for frequently created objects
+- [ ] Pre-allocate slices with make(capacity)
+- [ ] strings.Builder for concatenation
+- [ ] Minimize heap escapes
 
-### Datos
-- [ ] Struct layout eficiente (cache friendly)
-- [ ] copy() en lugar de loops manuales
-- [ ] Reusar backing arrays cuando sea posible
+### Data
+- [ ] Efficient struct layout (cache friendly)
+- [ ] copy() instead of manual loops
+- [ ] Reuse backing arrays when possible
 
 ### Profiling
-- [ ] pprof para identificar cuellos de botella
-- [ ] Benchmarks con -benchmem
-- [ ] go build -gcflags="-m" para ver escapes
+- [ ] pprof to identify bottlenecks
+- [ ] Benchmarks with -benchmem
+- [ ] go build -gcflags="-m" to see escapes
 
 ### Concurrency
-- [ ] sync.Map para mapas concurrentes
-- [ ] sync/atomic para contadores
-- [ ] Orden consistente de locks para evitar deadlocks
+- [ ] sync.Map for concurrent maps
+- [ ] sync/atomic for counters
+- [ ] Consistent lock ordering to avoid deadlocks
 
 ---
 
-## Referencias
+## References
 
 - [Go Performance](https://go.dev/wiki/Performance)
 - [Go Data Structures](https://go.dev/blog/slices-intro)

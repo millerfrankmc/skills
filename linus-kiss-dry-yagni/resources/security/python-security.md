@@ -1,64 +1,64 @@
-# Seguridad Específica - Python
+# Language-Specific Security - Python
 
-> Guía de protecciones de seguridad para código Python. NUNCA eliminar estos patrones al aplicar KISS-DRY-YAGNI.
+> Guide for security protections in Python code. NEVER remove these patterns when applying KISS-DRY-YAGNI.
 
 ---
 
-## 1. Deserialización Segura
+## 1. Safe Deserialization
 
-### El Problema: pickle es peligroso
+### The Problem: pickle is dangerous
 ```python
-# ❌ PROHIBIDO - NUNCA usar pickle con datos no confiables
+# ❌ FORBIDDEN - NEVER use pickle with untrusted data
 import pickle
 
 def process_request(data):
-    obj = pickle.loads(data)  # RCE si data es malicioso
+    obj = pickle.loads(data)  # RCE if data is malicious
     return obj
 ```
 
-### La Solución
+### The Solution
 ```python
-# ✅ CORRECTO - Usar JSON para datos no confiables
+# ✅ CORRECT - Use JSON for untrusted data
 import json
 
 def process_request(data: bytes) -> dict:
-    return json.loads(data)  # Seguro, no ejecuta código
+    return json.loads(data)  # Safe, does not execute code
 
-# ✅ Si necesitas pickle (datos internos), validar origen
+# ✅ If you need pickle (internal data), validate source
 def process_internal_data(data: bytes, source: str) -> Any:
     if source not in TRUSTED_INTERNAL_SERVICES:
         raise SecurityError("Untrusted source")
     return pickle.loads(data)
 ```
 
-### Alternativas Seguras
+### Safe Alternatives
 ```python
-# JSON - Para datos del cliente/API
+# JSON - For client/API data
 import json
 
-# MessagePack - Binario pero seguro
+# MessagePack - Binary but safe
 import msgpack
 
-# Protobuf - Estricto y eficiente
+# Protobuf - Strict and efficient
 from google.protobuf import message
 
-# YAML seguro - NUNCA usar load(), solo safe_load()
+# Safe YAML - NEVER use load(), only safe_load()
 import yaml
 data = yaml.safe_load(stream)  # ✅
-data = yaml.load(stream)       # ❌ Inseguro por defecto
+data = yaml.load(stream)       # ❌ Unsafe by default
 ```
 
 ---
 
-## 2. Inyección de Código
+## 2. Code Injection
 
-### eval() y exec()
+### eval() and exec()
 ```python
-# ❌ PROHIBIDO - NUNCA usar con input del usuario
+# ❌ FORBIDDEN - NEVER use with user input
 def calculate(expression: str) -> Any:
-    return eval(expression)  # RCE total
+    return eval(expression)  # Full RCE
 
-# ✅ CORRECTO - Usar safe_eval o bibliotecas especializadas
+# ✅ CORRECT - Use safe_eval or specialized libraries
 import ast
 import operator
 
@@ -79,30 +79,30 @@ def safe_eval(expression: str) -> float:
 
 ### SQL Injection
 ```python
-# ❌ PROHIBIDO - Formato de strings
+# ❌ FORBIDDEN - String formatting
 query = f"SELECT * FROM users WHERE id = {user_id}"
 
-# ✅ CORRECTO - Parametrización
+# ✅ CORRECT - Parameterization
 cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
 
-# ✅ CORRECTO - SQLAlchemy ORM
+# ✅ CORRECT - SQLAlchemy ORM
 from sqlalchemy import select
 stmt = select(User).where(User.id == user_id)
 
-# ✅ CORRECTO - Django ORM
+# ✅ CORRECT - Django ORM
 User.objects.filter(id=user_id)
 ```
 
 ---
 
-## 3. Protección de Datos Sensibles
+## 3. Sensitive Data Protection
 
 ### Secrets Management
 ```python
-# ❌ PROHIBIDO - Hardcodear secrets
+# ❌ FORBIDDEN - Hardcoding secrets
 API_KEY = "sk_live_1234567890abcdef"
 
-# ✅ CORRECTO - Variables de entorno
+# ✅ CORRECT - Environment variables
 import os
 from functools import lru_cache
 
@@ -113,26 +113,26 @@ def get_api_key() -> str:
         raise ValueError("API_KEY not set")
     return key
 
-# ✅ CORRECTO - Django settings
+# ✅ CORRECT - Django settings
 from django.conf import settings
-api_key = settings.API_KEY  # Leído de environment
+api_key = settings.API_KEY  # Read from environment
 
-# ✅ CORRECTO - python-dotenv para desarrollo
+# ✅ CORRECT - python-dotenv for development
 from dotenv import load_dotenv
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 ```
 
-### Logging Seguro
+### Safe Logging
 ```python
-# ❌ PROHIBIDO - Loggear datos sensibles
+# ❌ FORBIDDEN - Logging sensitive data
 logger.info(f"User login: {email}, password: {password}")
 
-# ✅ CORRECTO - Sanitizar antes de loggear
+# ✅ CORRECT - Sanitize before logging
 import copy
 
 def sanitize_sensitive(data: dict) -> dict:
-    """Remueve campos sensibles para logging."""
+    """Removes sensitive fields for logging."""
     SENSITIVE_FIELDS = {'password', 'token', 'secret', 'api_key', 'ssn'}
     sanitized = copy.deepcopy(data)
     for key in sanitized:
@@ -145,9 +145,9 @@ logger.info(f"User login: {sanitize_sensitive(user_data)}")
 
 ---
 
-## 4. Validación de Archivos
+## 4. File Validation
 
-### Upload Seguro
+### Safe Upload
 ```python
 import magic
 import mimetypes
@@ -158,21 +158,21 @@ ALLOWED_MIME_TYPES = {'application/pdf', 'image/jpeg', 'image/png'}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 def validate_upload(file_path: Path, declared_name: str) -> None:
-    # 1. Validar extensión
+    # 1. Validate extension
     ext = Path(declared_name).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise ValidationError(f"Extension {ext} not allowed")
 
-    # 2. Validar tamaño
+    # 2. Validate size
     if file_path.stat().st_size > MAX_FILE_SIZE:
         raise ValidationError("File too large")
 
-    # 3. Validar MIME type con python-magic (magic bytes)
+    # 3. Validate MIME type with python-magic (magic bytes)
     detected = magic.from_file(str(file_path), mime=True)
     if detected not in ALLOWED_MIME_TYPES:
         raise ValidationError(f"File type {detected} not allowed")
 
-    # 4. Validar que extensión coincide con contenido
+    # 4. Validate that extension matches content
     expected_ext = mimetypes.guess_extension(detected)
     if expected_ext and ext != expected_ext:
         raise ValidationError("Extension does not match file content")
@@ -180,26 +180,26 @@ def validate_upload(file_path: Path, declared_name: str) -> None:
 
 ---
 
-## 5. Protección Web (Django/Flask/FastAPI)
+## 5. Web Protection (Django/Flask/FastAPI)
 
 ### Django
 ```python
-# ✅ Configuraciones de seguridad que NUNCA eliminar
+# ✅ Security settings that should NEVER be removed
 # settings.py
 
-SECURE_SSL_REDIRECT = True          # HTTPS obligatorio
-SECURE_HSTS_SECONDS = 31536000      # HSTS 1 año
+SECURE_SSL_REDIRECT = True          # HTTPS required
+SECURE_HSTS_SECONDS = 31536000      # HSTS 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
-SESSION_COOKIE_SECURE = True        # Solo HTTPS
-CSRF_COOKIE_SECURE = True           # Solo HTTPS
+SESSION_COOKIE_SECURE = True        # HTTPS only
+CSRF_COOKIE_SECURE = True           # HTTPS only
 X_FRAME_OPTIONS = 'DENY'            # No clickjacking
 
-# CSRF Protection - NUNCA desactivar
-from django.views.decorators.csrf import csrf_exempt  # ⚠️ Solo para APIs que lo necesiten
+# CSRF Protection - NEVER disable
+from django.views.decorators.csrf import csrf_exempt  # ⚠️ Only for APIs that need it
 
-# Rate limiting con django-ratelimit
+# Rate limiting with django-ratelimit
 from ratelimit.decorators import ratelimit
 
 @ratelimit(key='ip', rate='5/m', method='POST')
@@ -209,7 +209,7 @@ def login_view(request):
 
 ### Flask
 ```python
-# ✅ Extensiones de seguridad esenciales
+# ✅ Essential security extensions
 from flask import Flask
 from flask_talisman import Talisman  # HTTPS, HSTS, CSP
 from flask_limiter import Limiter     # Rate limiting
@@ -217,7 +217,7 @@ from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 
-# NUNCA eliminar estas protecciones
+# NEVER remove these protections
 Talisman(app, force_https=True)
 CSRFProtect(app)
 
@@ -229,7 +229,7 @@ limiter = Limiter(
 
 @app.route('/login', methods=['POST'])
 @limiter.limit("5 per minute")  # Rate limiting login
-@limiter.limit("1 per second")  # Evita brute force rápido
+@limiter.limit("1 per second")  # Prevents fast brute force
 def login():
     pass
 ```
@@ -244,10 +244,10 @@ from slowapi.util import get_remote_address
 
 app = FastAPI()
 
-# NUNCA usar CORS permissivo en producción
+# NEVER use permissive CORS in production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://app.example.com"],  # Específico, NO ['*']
+    allow_origins=["https://app.example.com"],  # Specific, NOT ['*']
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization"],
@@ -265,11 +265,11 @@ async def login(request: Request):
 
 ---
 
-## 6. Cryptografía
+## 6. Cryptography
 
 ### Password Hashing
 ```python
-# ✅ CORRECTO - bcrypt con salt apropiado
+# ✅ CORRECT - bcrypt with appropriate salt
 import bcrypt
 
 def hash_password(password: str) -> bytes:
@@ -279,11 +279,11 @@ def hash_password(password: str) -> bytes:
 def verify_password(password: str, hashed: bytes) -> bool:
     return bcrypt.checkpw(password.encode(), hashed)
 
-# ✅ Alternativa - Argon2 (más moderno)
+# ✅ Alternative - Argon2 (more modern)
 from argon2 import PasswordHasher
 
 ph = PasswordHasher(
-    time_cost=2,      # Iteraciones
+    time_cost=2,      # Iterations
     memory_cost=65536, # 64MB
     parallelism=1
 )
@@ -299,9 +299,9 @@ def verify_password(password: str, hash_str: str) -> bool:
         return False
 ```
 
-### Tokens JWT
+### JWT Tokens
 ```python
-# ✅ CORRECTO - PyJWT con verificación estricta
+# ✅ CORRECT - PyJWT with strict verification
 import jwt
 from datetime import datetime, timedelta
 
@@ -334,19 +334,19 @@ def verify_token(token: str, secret: str) -> dict:
 
 ---
 
-## 7. Subprocess Seguro
+## 7. Safe Subprocess
 
 ```python
-# ❌ PROHIBIDO - Shell=True con input del usuario
+# ❌ FORBIDDEN - Shell=True with user input
 import subprocess
 cmd = f"grep {user_input} file.txt"
 subprocess.run(cmd, shell=True)  # Command injection
 
-# ✅ CORRECTO - Lista de argumentos, sin shell
+# ✅ CORRECT - List of arguments, no shell
 import shlex
 subprocess.run(['grep', user_input, 'file.txt'])
 
-# ✅ VALIDACIÓN estricta si es necesario
+# ✅ STRICT validation if necessary
 import re
 ALLOWED_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
 
@@ -357,25 +357,25 @@ def safe_grep(pattern: str, filename: str) -> str:
         ['grep', pattern, filename],
         capture_output=True,
         text=True,
-        timeout=30  # Timeout obligatorio
+        timeout=30  # Mandatory timeout
     )
     return result.stdout
 ```
 
 ---
 
-## 8. XML Seguro
+## 8. Safe XML
 
 ```python
-# ❌ PROHIBIDO - xml.etree con datos externos (XXE)
+# ❌ FORBIDDEN - xml.etree with external data (XXE)
 import xml.etree.ElementTree as ET
-ET.parse(untrusted_xml)  # Vulnerable a XXE
+ET.parse(untrusted_xml)  # Vulnerable to XXE
 
-# ✅ CORRECTO - defusedxml
+# ✅ CORRECT - defusedxml
 from defusedxml import ElementTree as ET
-ET.parse(untrusted_xml)  # Protegido contra XXE
+ET.parse(untrusted_xml)  # Protected against XXE
 
-# ✅ Alternativa - lxml con resolvers desactivados
+# ✅ Alternative - lxml with resolvers disabled
 from lxml import etree
 parser = etree.XMLParser(resolve_entities=False)
 tree = etree.parse(untrusted_xml, parser)
@@ -383,52 +383,52 @@ tree = etree.parse(untrusted_xml, parser)
 
 ---
 
-## 9. Context Managers para Recursos
+## 9. Context Managers for Resources
 
 ```python
-# ✅ CORRECTO - Siempre usar context managers
+# ✅ CORRECT - Always use context managers
 def process_file(filename: str) -> None:
-    # Garantiza cierre incluso si hay excepción
+    # Guarantees closing even if exception occurs
     with open(filename, 'r') as f:
         data = f.read()
 
-    # Lo mismo para conexiones
+    # Same for connections
     with psycopg2.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM users")
 
-    # Y para locks
+    # And for locks
     with threading.Lock():
         update_shared_resource()
 ```
 
 ---
 
-## Checklist Python Específico
+## Python-Specific Checklist
 
-### Seguridad
-- [ ] No usar `pickle`/`yaml.load()`/`eval()` con datos externos
-- [ ] Usar `defusedxml` en lugar de `xml.etree`
-- [ ] SQL parametrizado con `%s` placeholders
-- [ ] Secrets en variables de entorno, NO hardcodeados
-- [ ] Logging sanitizado (no passwords/tokens)
-- [ ] Validación de uploads con python-magic
-- [ ] CSRF protegido en frameworks web
-- [ ] HTTPS forzado en producción
-- [ ] Rate limiting en endpoints sensibles
-- [ ] bcrypt/argon2 para passwords
-- [ ] Subprocess sin shell=True
-- [ ] JWT con verificación estricta de claims
+### Security
+- [ ] Do not use `pickle`/`yaml.load()`/`eval()` with external data
+- [ ] Use `defusedxml` instead of `xml.etree`
+- [ ] SQL parameterized with `%s` placeholders
+- [ ] Secrets in environment variables, NOT hardcoded
+- [ ] Sanitized logging (no passwords/tokens)
+- [ ] Upload validation with python-magic
+- [ ] CSRF protected in web frameworks
+- [ ] HTTPS forced in production
+- [ ] Rate limiting on sensitive endpoints
+- [ ] bcrypt/argon2 for passwords
+- [ ] Subprocess without shell=True
+- [ ] JWT with strict claims verification
 
-### Recursos
-- [ ] Context managers (`with`) para archivos/conexiones
-- [ ] Timeouts en todas las operaciones I/O
-- [ ] Límites de tamaño en uploads
-- [ ] Graceful shutdown con signal handlers
+### Resources
+- [ ] Context managers (`with`) for files/connections
+- [ ] Timeouts on all I/O operations
+- [ ] Size limits on uploads
+- [ ] Graceful shutdown with signal handlers
 
 ---
 
-## Referencias
+## References
 
 - [OWASP Python Security](https://owasp.org/www-project-python-security/)
 - [Bandit - Security linter](https://bandit.readthedocs.io/)

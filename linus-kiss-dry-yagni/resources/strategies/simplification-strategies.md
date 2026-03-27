@@ -1,14 +1,14 @@
-# Estrategias de Simplificación
+# Simplification Strategies
 
-Técnicas probadas para reducir complejidad.
+Proven techniques to reduce complexity.
 
 ## 1. Guard Clauses
 
-**Problema**: Anidamiento profundo
-**Solución**: Retornar temprano
+**Problem**: Deep nesting
+**Solution**: Return early
 
 ```python
-# Antes
+# Before
 def process(user):
     if user:
         if user.active:
@@ -16,7 +16,7 @@ def process(user):
                 return do_something(user)
     return None
 
-# Después
+# After
 def process(user):
     if not user: return None
     if not user.active: return None
@@ -26,20 +26,20 @@ def process(user):
 
 ## 2. Extract Function
 
-**Problema**: Función hace múltiples cosas
-**Solución**: Dividir en funciones más pequeñas
+**Problem**: Function does multiple things
+**Solution**: Split into smaller functions
 
 ```python
-# Antes
+# Before
 def process_order(order):
-    # validar
-    # calcular totales
-    # aplicar descuentos
-    # guardar
-    # enviar email
+    # validate
+    # calculate totals
+    # apply discounts
+    # save
+    # send email
     pass
 
-# Después
+# After
 def process_order(order):
     validated = validate(order)
     totals = calculate_totals(validated)
@@ -50,15 +50,15 @@ def process_order(order):
 
 ## 3. Replace Parameter with Object
 
-**Problema**: Múltiples parámetros
-**Solución**: Agrupar en objeto/struct
+**Problem**: Multiple parameters
+**Solution**: Group into object/struct
 
 ```python
-# Antes
+# Before
 def create_user(name, email, phone, address, city, country, postal_code):
     pass
 
-# Después
+# After
 @dataclass
 class UserData:
     name: str
@@ -70,13 +70,13 @@ def create_user(data: UserData):
     pass
 ```
 
-## 4. Eliminar Abstracción Prematura
+## 4. Remove Premature Abstraction
 
-**Problema**: Interface/clase abstracta con 1 implementación
-**Solución**: Eliminar hasta que se necesite
+**Problem**: Interface/abstract class with 1 implementation
+**Solution**: Remove until needed
 
 ```python
-# Antes
+# Before
 class UserRepository(ABC):
     @abstractmethod
     def find(id): pass
@@ -84,25 +84,25 @@ class UserRepository(ABC):
 class SqlUserRepository(UserRepository):
     def find(id): ...
 
-# Después
+# After
 class UserRepository:
     def find(id): ...
 ```
 
 ## 5. Consolidate Conditional
 
-**Problema**: Condicionales similares en múltiples lugares
-**Solución**: Extraer a una función
+**Problem**: Similar conditionals in multiple places
+**Solution**: Extract to a function
 
 ```python
-# Antes
+# Before
 if user.age >= 18 and user.verified and not user.banned:
     # ...
-# ... más tarde
+# ... later
 if user.age >= 18 and user.verified and not user.banned:
     # ...
 
-# Después
+# After
 def can_access_premium(user):
     return user.age >= 18 and user.verified and not user.banned
 
@@ -112,11 +112,11 @@ if can_access_premium(user):
 
 ## 6. Replace Nested Conditional with Guard Clauses
 
-**Problema**: If-else profundo
-**Solución**: Guard clauses con returns tempranos
+**Problem**: Deep if-else
+**Solution**: Guard clauses with early returns
 
 ```typescript
-// Antes
+// Before
 function getPrice(user) {
     let price = 100;
     if (user.premium) {
@@ -133,7 +133,7 @@ function getPrice(user) {
     return price;
 }
 
-// Después
+// After
 function getPrice(user) {
     const BASE_PRICE = 100;
 
@@ -146,27 +146,27 @@ function getPrice(user) {
 
 ## 7. Remove Assignments to Parameters
 
-**Problema**: Reasignar parámetros
-**Solución**: Usar variables locales
+**Problem**: Reassigning parameters
+**Solution**: Use local variables
 
 ```python
-# Antes
+# Before
 def process(data):
     data = data.strip()
     data = data.lower()
     return data
 
-# Después
+# After
 def process(raw_data):
     cleaned = raw_data.strip()
     normalized = cleaned.lower()
     return normalized
 ```
 
-## Orden de Aplicación
+## Application Order
 
-1. **Primero**: YAGNI → Eliminar innecesario
-2. **Segundo**: KISS → Simplificar complejo
-3. **Tercero**: DRY → Centralizar duplicados
+1. **First**: YAGNI → Remove unnecessary
+2. **Second**: KISS → Simplify complex
+3. **Third**: DRY → Centralize duplicates
 
-Este orden evita crear abstracciones sobre cosas que deberían eliminarse.
+This order avoids creating abstractions over things that should be removed.
