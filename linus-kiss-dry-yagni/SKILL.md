@@ -1,10 +1,10 @@
 ---
-name: codeslim
+name: cygnus-codeslim
 description: Refactor existing complex code into simple, maintainable solutions. Use this skill when the user asks to simplify, rewrite, clean up, or improve code with long functions, duplicate code, deep nesting, excessive parameters, cryptic clever logic, injected dependencies, or over-engineering. Applies KISS, DRY, YAGNI, and Linus Torvalds philosophy. NEVER sacrifices security or performance for clean code - optimizes the obvious (N+1 queries, algorithmic complexity) without falling into premature optimization.
 compatibility: No dependencies required. Works with any programming language (Python, TypeScript, Go, Kotlin, Rust, etc.)
 ---
 
-# CodeSlim - KISS-DRY-YAGNI + Security + Performance
+# Cygnus CodeSlim - Intelligent Code Refactoring
 
 Direct simplicity skill. Applies corrections automatically. **NEVER sacrifices security or performance for clean code.**
 

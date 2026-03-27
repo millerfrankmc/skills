@@ -1,13 +1,13 @@
-# CodeSlim
+# Cygnus CodeSlim
 
 [![Skills](https://skills.sh/badge.svg)](https://skills.sh)
 
-> **CodeSlim** - The intelligent code refactoring skill that transforms complex, bloated code into clean, simple, and maintainable solutions. Applies KISS, DRY, YAGNI, and Linus Torvalds philosophy.
+> **Cygnus CodeSlim** - The intelligent code refactoring skill that transforms complex, bloated code into clean, simple, and maintainable solutions. Applies KISS, DRY, YAGNI, and Linus Torvalds philosophy.
 
 ## Installation
 
 ```bash
-npx skills add millerfrankmc/skills/codeslim
+npx skills add millerfrankmc/skills/cygnus-codeslim
 ```
 
 Supported on: Claude Code, Cursor, Codex, OpenCode, and [more agents](https://skills.sh).
